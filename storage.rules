@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /logos/{filePath=**} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /event-images/{eventId}/{filePath=**} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /{filePath=**} {
+      allow read, write: if false;
+    }
+  }
+}

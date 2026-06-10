@@ -1,0 +1,10 @@
+node_modules
+dist
+.npm-cache
+.DS_Store
+.env
+.env.local
+functions/node_modules
+functions/lib
+firebase-debug.log
+.firebase
