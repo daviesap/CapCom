@@ -1,14 +1,55 @@
 import { HttpsError } from "firebase-functions/v2/https";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldPath, FieldValue } from "firebase-admin/firestore";
 import { buildGenerateHomePayload } from "./generateHomePayloadBuilder.mjs";
+import fs from "fs";
+import path from "path";
 
 const USER_ROLES = {
   SUPER_ADMIN: "SuperAdmin",
   ADMIN: "Admin",
   USER: "User",
+  VIEWER: "Viewer",
 };
 
 const FIRESTORE_IN_QUERY_LIMIT = 30;
+
+function safeFileName(value) {
+  return String(value || "payload")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .slice(0, 120)
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function writeLocalTestingJson({ outputDir, eventId, suffix, data }) {
+  if (!outputDir) return null;
+
+  try {
+    fs.mkdirSync(outputDir, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filePath = path.join(
+      outputDir,
+      `${timestamp}-${safeFileName(eventId)}-${suffix}.json`
+    );
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    return filePath;
+  } catch (error) {
+    console.error("Failed to write local testing JSON for generateHomeForEvent.", {
+      eventId,
+      suffix,
+      error,
+    });
+    return null;
+  }
+}
+
+function redactPayloadForDisk(payload, apiKeyDiagnostics = null) {
+  return {
+    ...payload,
+    api_key: payload?.api_key ? "REDACTED" : payload?.api_key,
+    ...(apiKeyDiagnostics ? { localTestingApiKey: apiKeyDiagnostics } : {}),
+  };
+}
 
 function requireString(value, fieldName) {
   const normalised = String(value || "").trim();
@@ -57,6 +98,16 @@ function sortScheduleDetails(details) {
 function normaliseSortOrder(value, fallback = 1) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function addNormalisedEmail(emails, seenEmails, value) {
+  if (typeof value !== "string") return;
+
+  const email = value.trim().toLowerCase();
+  if (!email || seenEmails.has(email)) return;
+
+  seenEmails.add(email);
+  emails.push(email);
 }
 
 function parseArchiveValue(value) {
@@ -167,21 +218,67 @@ async function getCompanyContactsForCompanies(db, companyIds) {
   });
 }
 
-function buildAllowedEmailsFromCompanyContacts({ companies = [], companyContacts = [] }) {
+async function getUsersByIds(db, userIds) {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+  if (uniqueUserIds.length === 0) return [];
+
+  const users = [];
+  for (let index = 0; index < uniqueUserIds.length; index += FIRESTORE_IN_QUERY_LIMIT) {
+    const userIdChunk = uniqueUserIds.slice(index, index + FIRESTORE_IN_QUERY_LIMIT);
+    const snapshot = await db
+      .collection("users")
+      .where(FieldPath.documentId(), "in", userIdChunk)
+      .get();
+    users.push(...snapshot.docs.map(docToRecord));
+  }
+
+  return users;
+}
+
+async function getAllowedUserProfilesForEvent(db, eventRecord) {
+  const [
+    eventAssignments,
+    superAdminUsers,
+  ] = await Promise.all([
+    getCollectionWhere(db, "eventAssignments", "eventId", "==", eventRecord.id),
+    getCollectionWhere(db, "users", "role", "==", USER_ROLES.SUPER_ADMIN),
+  ]);
+  const assignedUserIds = eventAssignments
+    .filter((assignment) =>
+      assignment?.eventId === eventRecord.id
+      && assignment?.clientId === eventRecord.clientId
+      && [USER_ROLES.USER, USER_ROLES.VIEWER].includes(assignment?.accessRole)
+    )
+    .map((assignment) => assignment.userId);
+  const assignedUsers = (await getUsersByIds(db, assignedUserIds))
+    .filter((user) => user?.clientId === eventRecord.clientId);
+  const clientUsers = eventRecord.clientId
+    ? await getCollectionWhere(db, "users", "clientId", "==", eventRecord.clientId)
+    : [];
+  const clientAdminUsers = clientUsers.filter((user) => user?.role === USER_ROLES.ADMIN);
+
+  return [
+    ...assignedUsers,
+    ...clientAdminUsers,
+    ...superAdminUsers,
+  ].filter((user) => user?.isActive === true);
+}
+
+function buildAllowedEmails({ companies = [], companyContacts = [], userProfiles = [] }) {
   const companyIds = new Set(companies.map((company) => company.id).filter(Boolean));
   const seenEmails = new Set();
+  const emails = [];
 
-  return companyContacts.reduce((emails, contact) => {
-    if (!companyIds.has(contact?.companyId)) return emails;
-    if (typeof contact.email !== "string") return emails;
+  companyContacts.forEach((contact) => {
+    if (!companyIds.has(contact?.companyId)) return;
+    addNormalisedEmail(emails, seenEmails, contact.email);
+  });
 
-    const email = contact.email.trim().toLowerCase();
-    if (!email || seenEmails.has(email)) return emails;
+  userProfiles.forEach((userProfile) => {
+    addNormalisedEmail(emails, seenEmails, userProfile.email);
+  });
 
-    seenEmails.add(email);
-    emails.push(email);
-    return emails;
-  }, []);
+  return emails;
 }
 
 async function loadEventGenerationData(db, eventId) {
@@ -223,6 +320,7 @@ async function loadEventGenerationData(db, eventId) {
     db,
     companies.map((company) => company.id)
   );
+  const allowedUserProfiles = await getAllowedUserProfilesForEvent(db, eventRecord);
 
   return {
     eventRecord,
@@ -244,6 +342,7 @@ async function loadEventGenerationData(db, eventId) {
     ),
     companies,
     companyContacts,
+    allowedUserProfiles,
   };
 }
 
@@ -262,6 +361,8 @@ export async function generateHomeForEventCallable({
   db,
   apiKey,
   oldV2GenerateHomeUrl,
+  localTestingOutputDir = null,
+  apiKeyDiagnostics = null,
 }) {
   if (!request.auth?.uid) {
     throw new HttpsError("unauthenticated", "You must be signed in.");
@@ -292,9 +393,10 @@ export async function generateHomeForEventCallable({
     throw new HttpsError("permission-denied", "You do not have permission to update this event.");
   }
 
-  const allowedEmails = buildAllowedEmailsFromCompanyContacts({
+  const allowedEmails = buildAllowedEmails({
     companies: generationData.companies,
     companyContacts: generationData.companyContacts,
+    userProfiles: generationData.allowedUserProfiles,
   });
 
   const payload = buildGenerateHomePayload({
@@ -305,11 +407,26 @@ export async function generateHomeForEventCallable({
     callerUid: request.auth.uid,
     callerEmail: request.auth.token?.email || callerProfile.email || "",
   });
+  const localTestingEnabled = Boolean(localTestingOutputDir);
+  const debugStatus = {
+    enabled: localTestingEnabled,
+    reason: localTestingEnabled ? "local_testing_enabled" : "not_running_locally",
+  };
+  const debugPayloadPath = writeLocalTestingJson({
+    outputDir: localTestingOutputDir,
+    eventId,
+    suffix: "payload",
+    data: redactPayloadForDisk(payload, apiKeyDiagnostics),
+  });
+  if (localTestingEnabled && !debugPayloadPath) {
+    debugStatus.reason = "failed_to_write_payload";
+  }
 
   const eventRef = db.collection("events").doc(eventId);
   let shareArchiveId = null;
   let apiCode = 0;
   let apiResponse = null;
+  let debugResponsePath = null;
 
   try {
     const response = await fetch(oldV2GenerateHomeUrl, {
@@ -319,6 +436,15 @@ export async function generateHomeForEventCallable({
     });
     apiCode = response.status;
     apiResponse = await parseResponseBody(response);
+    debugResponsePath = writeLocalTestingJson({
+      outputDir: localTestingOutputDir,
+      eventId,
+      suffix: "response",
+      data: apiResponse,
+    });
+    if (localTestingEnabled && !debugResponsePath) {
+      debugStatus.reason = "failed_to_write_response";
+    }
 
     const eventUpdate = {
       "API Code": apiCode,
@@ -331,7 +457,13 @@ export async function generateHomeForEventCallable({
       const message = typeof apiResponse === "object" && apiResponse?.message
         ? apiResponse.message
         : "Generate home failed.";
-      throw new HttpsError("aborted", message, { apiCode, apiResponse });
+      throw new HttpsError("aborted", message, {
+        apiCode,
+        apiResponse,
+        debug: debugStatus,
+        debugPayloadPath,
+        debugResponsePath,
+      });
     }
 
     await eventRef.update({
@@ -353,6 +485,9 @@ export async function generateHomeForEventCallable({
       success: true,
       apiCode,
       shareArchiveId,
+      debug: debugStatus,
+      debugPayloadPath,
+      debugResponsePath,
       message: typeof apiResponse === "object" && apiResponse?.message
         ? apiResponse.message
         : "Share output updated.",
@@ -361,6 +496,15 @@ export async function generateHomeForEventCallable({
   } catch (error) {
     if (apiCode === 0) {
       apiResponse = error instanceof Error ? error.message : String(error);
+      debugResponsePath = writeLocalTestingJson({
+        outputDir: localTestingOutputDir,
+        eventId,
+        suffix: "response",
+        data: apiResponse,
+      });
+      if (localTestingEnabled && !debugResponsePath) {
+        debugStatus.reason = "failed_to_write_response";
+      }
       await eventRef.update({
         "API Code": apiCode,
         "API Response": apiResponse,
@@ -373,6 +517,9 @@ export async function generateHomeForEventCallable({
     throw new HttpsError("internal", "Could not update share output.", {
       apiCode,
       apiResponse,
+      debug: debugStatus,
+      debugPayloadPath,
+      debugResponsePath,
     });
   }
 }

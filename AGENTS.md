@@ -319,6 +319,23 @@ cd /Users/apndavies/Coding/capcom
 npm run emulate:functions
 ```
 
+For local Share tab testing, the callable `generateHomeForEvent` needs the old PDF Generator API key in the emulator environment. Start the Functions emulator with:
+
+```bash
+cd /Users/apndavies/Coding/capcom
+LOCAL_OLD_PDF_GENERATOR_API_KEY='<old-pdf-generator-api-key>' npm run emulate:functions
+```
+
+If the key contains exclamation marks, such as a key ending in `!!`, keep the value in single quotes so the shell passes it literally.
+
+The Vite app must also have this local-only setting before it starts:
+
+```text
+VITE_USE_FUNCTIONS_EMULATOR="true"
+```
+
+Restart the Vite dev server after changing `.env.local`.
+
 Expected local endpoints:
 
 ```text

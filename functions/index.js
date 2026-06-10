@@ -3,6 +3,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import path from "path";
 import process from "process";
 import { generateHomeForEventCallable } from "./generateSchedules/generateHomeForEventCallable.mjs";
 
@@ -28,6 +29,18 @@ function requireString(value, fieldName) {
     throw new HttpsError("invalid-argument", `${fieldName} is required.`);
   }
   return normalised;
+}
+
+function getLocalTestingOutputDir() {
+  if (!process.env.FUNCTIONS_EMULATOR) return null;
+  if (process.env.LOCAL_TESTING_OUTPUT_DIR) {
+    return path.resolve(process.env.LOCAL_TESTING_OUTPUT_DIR);
+  }
+
+  const cwd = process.cwd();
+  return path.basename(cwd) === "functions"
+    ? path.resolve(cwd, "..", "local_testing")
+    : path.resolve(cwd, "local_testing");
 }
 
 function normaliseNewUserPayload(data) {
@@ -161,8 +174,9 @@ export const generateHomeForEvent = onCall({
   timeoutSeconds: 540,
   memory: "1GiB",
 }, async (request) => {
+  const localApiKey = process.env.LOCAL_OLD_PDF_GENERATOR_API_KEY || "";
   const apiKey = process.env.FUNCTIONS_EMULATOR
-    ? (process.env.LOCAL_OLD_PDF_GENERATOR_API_KEY || "dev-key")
+    ? (localApiKey || "dev-key")
     : OLD_PDF_GENERATOR_API_KEY.value();
 
   const oldV2GenerateHomeUrl = process.env.FUNCTIONS_EMULATOR
@@ -174,5 +188,14 @@ export const generateHomeForEvent = onCall({
     db,
     apiKey,
     oldV2GenerateHomeUrl,
+    localTestingOutputDir: getLocalTestingOutputDir(),
+    apiKeyDiagnostics: process.env.FUNCTIONS_EMULATOR
+      ? {
+          source: localApiKey ? "LOCAL_OLD_PDF_GENERATOR_API_KEY" : "fallback-dev-key",
+          provided: Boolean(localApiKey),
+          fallbackUsed: !localApiKey,
+          length: apiKey.length,
+        }
+      : null,
   });
 });

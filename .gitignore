@@ -7,4 +7,6 @@ dist
 functions/node_modules
 functions/lib
 firebase-debug.log
+firestore-debug.log
 .firebase
+local_testing

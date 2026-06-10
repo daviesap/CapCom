@@ -67,6 +67,17 @@ function getArrayValue(primary, fallback) {
   return [];
 }
 
+function normaliseEmailList(emails = []) {
+  const seenEmails = new Set();
+  return getArrayValue(emails)
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => {
+      if (!email || seenEmails.has(email)) return false;
+      seenEmails.add(email);
+      return true;
+    });
+}
+
 function readGdprValue(contact) {
   if (typeof contact?.GDPR === "boolean") return contact.GDPR;
   if (typeof contact?.gdpr === "boolean") return contact.gdpr;
@@ -268,6 +279,7 @@ export function buildGenerateHomePayload({
   companies,
   eventContacts = [],
   keyInfo = [],
+  allowedEmails = [],
   callerUid,
   callerEmail,
   previousData,
@@ -293,6 +305,7 @@ export function buildGenerateHomePayload({
       showMomKeyInfo: normaliseBoolean(eventRecord.showMomKeyInfo, false),
       keyInfo: buildKeyInfo(keyInfo),
       keyPeople: buildKeyPeople({ eventRecord, companies, eventContacts }),
+      allowedEmails: normaliseEmailList(allowedEmails),
       locations: locations
         .filter((location) => !location.parentLocationId)
         .map((location) => ({ name: location.name || "" }))
