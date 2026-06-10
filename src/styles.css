@@ -301,6 +301,28 @@ summary:focus-visible {
   min-height: var(--app-topbar-event-height);
 }
 
+.page-topbar-content {
+  align-items: center;
+  display: flex;
+  gap: var(--space-6);
+  justify-content: space-between;
+  max-width: var(--page-max-width);
+  min-width: 0;
+  width: 100%;
+}
+
+.topbar-action-button {
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.topbar-action-button:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-surface));
+}
+
 .event-topbar-content {
   align-items: center;
   display: flex;
@@ -3146,6 +3168,25 @@ textarea {
   .app-topbar-event {
     min-height: calc(var(--app-topbar-event-height) + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) var(--space-5) 0;
+  }
+
+  .page-topbar-content {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .app-topbar .topbar-action-button {
+    border-radius: var(--radius-md);
+    flex: 0 0 var(--touch-target);
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+    padding: 0;
+    width: var(--touch-target);
+  }
+
+  .topbar-action-button .button-label {
+    display: none;
   }
 
   .event-topbar-content {

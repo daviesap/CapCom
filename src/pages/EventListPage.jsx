@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { canCreateEvents } from "../auth/roles.js";
 import EmptyState from "../components/EmptyState.jsx";
@@ -65,7 +65,11 @@ function formatEventMetaLine(event) {
   return [event.venue, formatEventDateRange(event.startDate, event.endDate)].filter(Boolean).join(" | ");
 }
 
+const noopSetTopbarConfig = () => {};
+
 export default function EventListPage() {
+  const outletContext = useOutletContext();
+  const setTopbarConfig = outletContext?.setTopbarConfig || noopSetTopbarConfig;
   const {
     userProfile,
     profileLoading,
@@ -84,6 +88,16 @@ export default function EventListPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const userCanCreateEvents = canCreateEvents(userProfile);
+
+  const openCreateOverlay = () => {
+    setError("");
+    setForm({
+      ...emptyForm,
+      clientId: activeClientId || userProfile?.clientId || "",
+      clientName: activeClient?.clientName || userProfile?.clientName || "",
+    });
+    setShowCreateOverlay(true);
+  };
 
   const loadEvents = async () => {
     if (isSuperAdmin && activeClientLoading) {
@@ -121,6 +135,43 @@ export default function EventListPage() {
     if (profileLoading) return;
     loadEvents();
   }, [profileLoading, userProfile, isSuperAdmin, activeClientId, activeClientLoading]);
+
+  useEffect(() => {
+    setTopbarConfig({
+      content: (
+        <div className="page-topbar-content">
+          <h1 className="app-topbar-title">Events</h1>
+          {userCanCreateEvents ? (
+            <button
+              className="button topbar-action-button"
+              type="button"
+              aria-label="Create event"
+              disabled={isOffline || profileLoading || activeClientLoading || (isSuperAdmin && !activeClientId)}
+              onClick={openCreateOverlay}
+            >
+              <CapcomIcon name="add" size={18} weight="bold" />
+              <span className="button-label">Create Event</span>
+            </button>
+          ) : null}
+        </div>
+      ),
+    });
+  }, [
+    activeClient?.clientName,
+    activeClientId,
+    activeClientLoading,
+    isOffline,
+    isSuperAdmin,
+    profileLoading,
+    setTopbarConfig,
+    userCanCreateEvents,
+    userProfile?.clientId,
+    userProfile?.clientName,
+  ]);
+
+  useEffect(() => () => {
+    setTopbarConfig(null);
+  }, [setTopbarConfig]);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -185,32 +236,6 @@ export default function EventListPage() {
 
   return (
     <main className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Events</h1>
-        </div>
-        {userCanCreateEvents ? (
-          <button
-            className="button"
-            type="button"
-            aria-label="Create event"
-            disabled={isOffline || profileLoading || activeClientLoading || (isSuperAdmin && !activeClientId)}
-            onClick={() => {
-              setError("");
-              setForm({
-                ...emptyForm,
-                clientId: activeClientId || userProfile?.clientId || "",
-                clientName: activeClient?.clientName || userProfile?.clientName || "",
-              });
-              setShowCreateOverlay(true);
-            }}
-          >
-            <CapcomIcon name="add" size={18} weight="bold" />
-            <span className="button-label">Create Event</span>
-          </button>
-        ) : null}
-      </div>
-
       {error && !showCreateOverlay ? <p className="error">{error}</p> : null}
       {isOffline ? (
         <p className="message offline-message">Offline mode: previously loaded schedules are read-only.</p>

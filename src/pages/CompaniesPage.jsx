@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import Loading from "../components/Loading.jsx";
 import Modal from "../components/Modal.jsx";
@@ -17,7 +18,11 @@ const emptyCompanyForm = {
   address: "",
 };
 
+const noopSetTopbarConfig = () => {};
+
 export default function CompaniesPage() {
+  const outletContext = useOutletContext();
+  const setTopbarConfig = outletContext?.setTopbarConfig || noopSetTopbarConfig;
   const {
     profileLoading,
     isSuperAdmin,
@@ -64,6 +69,38 @@ export default function CompaniesPage() {
     resetCompanyForm();
     loadCompanies(activeClientId);
   }, [profileLoading, activeClientLoading, activeClientId]);
+
+  useEffect(() => {
+    setTopbarConfig({
+      content: (
+        <div className="page-topbar-content">
+          <h1 className="app-topbar-title">Companies</h1>
+          {canManageCompanies ? (
+            <button
+              className="button topbar-action-button"
+              type="button"
+              aria-label="Add company"
+              disabled={isOffline || activeClientLoading || !activeClientId}
+              onClick={startAddingCompany}
+            >
+              <CapcomIcon name="add" size={18} weight="bold" />
+              <span className="button-label">Add company</span>
+            </button>
+          ) : null}
+        </div>
+      ),
+    });
+  }, [
+    activeClientId,
+    activeClientLoading,
+    canManageCompanies,
+    isOffline,
+    setTopbarConfig,
+  ]);
+
+  useEffect(() => () => {
+    setTopbarConfig(null);
+  }, [setTopbarConfig]);
 
   const updateCompanyFormField = (field, value) => {
     setCompanyForm((current) => ({ ...current, [field]: value }));
@@ -185,21 +222,6 @@ export default function CompaniesPage() {
       ) : null}
       {companyError ? <p className="error">{companyError}</p> : null}
       {companyMessage ? <p className="message">{companyMessage}</p> : null}
-
-      <div className="company-toolbar">
-        {canManageCompanies ? (
-          <button
-            className="button"
-            type="button"
-            aria-label="Add company"
-            disabled={isOffline || activeClientLoading || !activeClientId}
-            onClick={startAddingCompany}
-          >
-            <CapcomIcon name="add" size={18} weight="bold" />
-            <span className="button-label">Add company</span>
-          </button>
-        ) : null}
-      </div>
 
       {companies.length === 0 ? (
         <p className="item-meta">No companies yet.</p>
