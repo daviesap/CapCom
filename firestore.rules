@@ -320,7 +320,6 @@ service cloud.firestore {
           "detail",
           "imagePath",
           "imageUrl",
-          "severity",
           "status",
           "title",
           "type",
@@ -333,7 +332,6 @@ service cloud.firestore {
           "detail",
           "imagePath",
           "imageUrl",
-          "severity",
           "status",
           "title",
           "type",
@@ -348,9 +346,8 @@ service cloud.firestore {
         && issue.imagePath.size() <= 500
         && issue.imageUrl is string
         && issue.imageUrl.size() <= 2000
-        && issue.status in ["Open", "In progress", "Closed"]
-        && issue.type in ["Minor bug", "Major bug", "Notes", "Wishlist"]
-        && issue.severity in ["Major", "Hmmmm", "Minor"]
+        && issue.status in ["In progress", "Closed"]
+        && issue.type in ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"]
         && issue.createdAt is timestamp
         && issue.updatedAt is timestamp
         && (issue.createdBy is string || issue.createdBy == null)

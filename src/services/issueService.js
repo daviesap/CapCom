@@ -13,16 +13,14 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db } from "../firebase/firestore";
 import { storage } from "../firebase/storage.js";
 
-export const ISSUE_STATUSES = ["Open", "In progress", "Closed"];
-export const ISSUE_TYPES = ["Minor bug", "Major bug", "Notes", "Wishlist"];
-export const ISSUE_SEVERITIES = ["Major", "Hmmmm", "Minor"];
+export const ISSUE_STATUSES = ["In progress", "Closed"];
+export const ISSUE_TYPES = ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"];
 
 export const ISSUE_DEFAULTS = {
   title: "",
   detail: "",
-  status: "Open",
-  type: "Minor bug",
-  severity: "Minor",
+  status: "In progress",
+  type: "Friction",
 };
 
 const ISSUE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
@@ -40,9 +38,6 @@ function normaliseIssueData(issueData) {
     detail: String(issueData.detail || "").trim(),
     status: ISSUE_STATUSES.includes(issueData.status) ? issueData.status : ISSUE_DEFAULTS.status,
     type: ISSUE_TYPES.includes(issueData.type) ? issueData.type : ISSUE_DEFAULTS.type,
-    severity: ISSUE_SEVERITIES.includes(issueData.severity)
-      ? issueData.severity
-      : ISSUE_DEFAULTS.severity,
   };
 }
 

@@ -25,7 +25,6 @@ import {
 } from "../services/eventAssignmentService.js";
 import {
   ISSUE_DEFAULTS,
-  ISSUE_SEVERITIES,
   ISSUE_STATUSES,
   ISSUE_TYPES,
   createIssue,
@@ -58,6 +57,7 @@ const emptyIssueForm = {
 };
 
 const ISSUE_STATUS_FILTERS = ["All", ...ISSUE_STATUSES];
+const ISSUE_TYPE_FILTERS = ["All", ...ISSUE_TYPES];
 
 function slugifyClientName(clientName) {
   return clientName
@@ -88,8 +88,7 @@ function formatIssueDate(timestamp) {
 
 function getIssueStatusToneClassName(status) {
   if (status === "Closed") return "issue-status-closed";
-  if (status === "In progress") return "issue-status-progress";
-  return "issue-status-open";
+  return "issue-status-progress";
 }
 
 function getIssueFilterStatusToneClassName(status) {
@@ -102,22 +101,13 @@ function getIssueStatusClassName(status) {
 }
 
 function getIssueTypeIconName(type) {
-  if (type === "Major bug") return "issueMajorBug";
-  if (type === "Notes") return "issueNotes";
-  if (type === "Wishlist") return "issueWishlist";
+  if (type === "Major Bug") return "issueMajorBug";
+  if (type === "Minor Bug") return "issueMinorBug";
+  if (type === "Friction") return "issueFriction";
+  if (type === "Feature") return "issueFeature";
+  if (type === "Nice Idea") return "issueNiceIdea";
+  if (type === "Tweak") return "issueTweak";
   return "issueMinorBug";
-}
-
-function getIssueSeverityIconName(severity) {
-  if (severity === "Major") return "issueSeverityMajor";
-  if (severity === "Hmmmm") return "issueSeverityMedium";
-  return "issueSeverityMinor";
-}
-
-function getIssueSeverityToneClassName(severity) {
-  if (severity === "Major") return "issue-severity-major";
-  if (severity === "Hmmmm") return "issue-severity-medium";
-  return "issue-severity-minor";
 }
 
 export default function AdminPage() {
@@ -163,7 +153,9 @@ export default function AdminPage() {
   const [issueUpdatingId, setIssueUpdatingId] = useState("");
   const [activeIssueStatusMenuId, setActiveIssueStatusMenuId] = useState("");
   const [isIssueFilterMenuOpen, setIsIssueFilterMenuOpen] = useState(false);
+  const [isIssueTypeFilterMenuOpen, setIsIssueTypeFilterMenuOpen] = useState(false);
   const [issueStatusFilter, setIssueStatusFilter] = useState("All");
+  const [issueTypeFilter, setIssueTypeFilter] = useState("All");
   const [issueMessage, setIssueMessage] = useState("");
   const [issueError, setIssueError] = useState("");
   const issueFileInputRef = useRef(null);
@@ -181,10 +173,19 @@ export default function AdminPage() {
     }), { All: issues.length });
   }, [issues]);
 
+  const issueTypeCounts = useMemo(() => {
+    return issues.reduce((counts, issue) => ({
+      ...counts,
+      [issue.type]: (counts[issue.type] || 0) + 1,
+    }), { All: issues.length });
+  }, [issues]);
+
   const filteredIssues = useMemo(() => {
-    if (issueStatusFilter === "All") return issues;
-    return issues.filter((issue) => issue.status === issueStatusFilter);
-  }, [issues, issueStatusFilter]);
+    return issues.filter((issue) => (
+      (issueStatusFilter === "All" || issue.status === issueStatusFilter)
+      && (issueTypeFilter === "All" || issue.type === issueTypeFilter)
+    ));
+  }, [issues, issueStatusFilter, issueTypeFilter]);
 
   const loadClients = async () => {
     setClientsLoading(true);
@@ -607,7 +608,6 @@ export default function AdminPage() {
       detail: issue.detail || "",
       status: issue.status || ISSUE_DEFAULTS.status,
       type: issue.type || ISSUE_DEFAULTS.type,
-      severity: issue.severity || ISSUE_DEFAULTS.severity,
     });
     setEditingIssueId(issue.id);
     setIssueImageFile(null);
@@ -922,11 +922,24 @@ export default function AdminPage() {
       {!profileLoading && isSuperAdmin && activeAdminSection === "issues" ? (
         <div className="admin-grid">
           <section className="panel">
-            <div className="panel-heading">
+            <div className="panel-heading issue-panel-heading">
               <div>
                 <h2>Issues</h2>
               </div>
-              <div className="issue-panel-actions">
+              {!isIssueFormOpen ? (
+                <button
+                  className="button admin-add-issue-button"
+                  type="button"
+                  aria-label="Add new issue"
+                  disabled={issueSaving}
+                  onClick={openIssueForm}
+                >
+                  <CapcomIcon name="add" size={18} weight="bold" />
+                  <span className="button-label">Add Issue</span>
+                </button>
+              ) : null}
+            </div>
+            <div className="issue-panel-actions">
                 <div className="issue-status-filter" aria-label="Filter issues by status">
                   {ISSUE_STATUS_FILTERS.map((status) => (
                     <button
@@ -940,6 +953,7 @@ export default function AdminPage() {
                         setIssueStatusFilter(status);
                         setActiveIssueStatusMenuId("");
                         setIsIssueFilterMenuOpen(false);
+                        setIsIssueTypeFilterMenuOpen(false);
                       }}
                     >
                       {status !== "All" ? (
@@ -969,6 +983,7 @@ export default function AdminPage() {
                     aria-label="Filter issues by status"
                     onClick={() => {
                       setIsIssueFilterMenuOpen((isOpen) => !isOpen);
+                      setIsIssueTypeFilterMenuOpen(false);
                       setActiveIssueStatusMenuId("");
                     }}
                   >
@@ -996,6 +1011,7 @@ export default function AdminPage() {
                           onClick={() => {
                             setIssueStatusFilter(status);
                             setIsIssueFilterMenuOpen(false);
+                            setIsIssueTypeFilterMenuOpen(false);
                             setActiveIssueStatusMenuId("");
                           }}
                         >
@@ -1010,20 +1026,89 @@ export default function AdminPage() {
                     </div>
                   ) : null}
                 </div>
-
-                {!isIssueFormOpen ? (
+                <div className="issue-type-filter" aria-label="Filter issues by type">
+                  {ISSUE_TYPE_FILTERS.map((type) => (
+                    <button
+                      className={issueTypeFilter === type
+                        ? "issue-filter-button active"
+                        : "issue-filter-button"}
+                      type="button"
+                      key={type}
+                      aria-pressed={issueTypeFilter === type}
+                      onClick={() => {
+                        setIssueTypeFilter(type);
+                        setActiveIssueStatusMenuId("");
+                        setIsIssueFilterMenuOpen(false);
+                        setIsIssueTypeFilterMenuOpen(false);
+                      }}
+                    >
+                      {type !== "All" ? (
+                        <CapcomIcon name={getIssueTypeIconName(type)} size={16} weight="duotone" />
+                      ) : null}
+                      <span>{type}</span>
+                      <span className="issue-filter-count">{issueTypeCounts[type] || 0}</span>
+                    </button>
+                  ))}
+                </div>
+                <div
+                  className="issue-type-filter-menu"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setIsIssueTypeFilterMenuOpen(false);
+                    }
+                  }}
+                >
                   <button
-                    className="button admin-add-issue-button"
+                    className="issue-status-trigger issue-filter-trigger"
                     type="button"
-                    aria-label="Add new issue"
-                    disabled={issueSaving}
-                    onClick={openIssueForm}
+                    aria-expanded={isIssueTypeFilterMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Filter issues by type"
+                    onClick={() => {
+                      setIsIssueTypeFilterMenuOpen((isOpen) => !isOpen);
+                      setIsIssueFilterMenuOpen(false);
+                      setActiveIssueStatusMenuId("");
+                    }}
                   >
-                    <CapcomIcon name="add" size={18} weight="bold" />
-                    <span className="button-label">Add Issue</span>
+                    <span className="issue-filter-trigger-label">
+                      {issueTypeFilter !== "All" ? (
+                        <CapcomIcon name={getIssueTypeIconName(issueTypeFilter)} size={16} weight="duotone" />
+                      ) : null}
+                      <span>{issueTypeFilter}</span>
+                      <span className="issue-filter-count">{issueTypeCounts[issueTypeFilter] || 0}</span>
+                    </span>
+                    <CapcomIcon name="caretRight" size={16} weight="bold" />
                   </button>
-                ) : null}
-              </div>
+
+                  {isIssueTypeFilterMenuOpen ? (
+                    <div className="issue-status-options issue-filter-options" role="menu">
+                      {ISSUE_TYPE_FILTERS.map((type) => (
+                        <button
+                          className={issueTypeFilter === type
+                            ? "issue-status-option issue-filter-option active"
+                            : "issue-status-option issue-filter-option"}
+                          type="button"
+                          role="menuitem"
+                          key={type}
+                          onClick={() => {
+                            setIssueTypeFilter(type);
+                            setIsIssueTypeFilterMenuOpen(false);
+                            setIsIssueFilterMenuOpen(false);
+                            setActiveIssueStatusMenuId("");
+                          }}
+                        >
+                          {type !== "All" ? (
+                            <CapcomIcon name={getIssueTypeIconName(type)} size={16} weight="duotone" />
+                          ) : (
+                            <span />
+                          )}
+                          <span>{type}</span>
+                          <span className="issue-filter-count">{issueTypeCounts[type] || 0}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
             </div>
 
             {issueError ? <p className="error">{issueError}</p> : null}
@@ -1034,7 +1119,7 @@ export default function AdminPage() {
               <p className="message">No issues yet.</p>
             ) : null}
             {!issuesLoading && !issueError && issues.length > 0 && filteredIssues.length === 0 ? (
-              <p className="message">No {issueStatusFilter.toLowerCase()} issues.</p>
+              <p className="message">No issues match the selected filters.</p>
             ) : null}
 
             {!issuesLoading && filteredIssues.length > 0 ? (
@@ -1062,7 +1147,7 @@ export default function AdminPage() {
                           <span className={getIssueStatusClassName(issue.status)}>{issue.status}</span>
                         </div>
                         <p className="item-meta">
-                          {formatIssueDate(issue.createdAt)} | {issue.type} | {issue.severity}
+                          {formatIssueDate(issue.createdAt)} | {issue.type}
                         </p>
                         {issue.detail ? (
                           <p className="issue-detail">{issue.detail}</p>
@@ -1196,31 +1281,6 @@ export default function AdminPage() {
                     >
                       <CapcomIcon name={getIssueTypeIconName(type)} size={18} weight="duotone" />
                       <span>{type}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="form-row full">
-                <span className="field-label" id="issueSeverityLabel">Severity</span>
-                <div
-                  className="issue-choice-chips"
-                  role="radiogroup"
-                  aria-labelledby="issueSeverityLabel"
-                >
-                  {ISSUE_SEVERITIES.map((severity) => (
-                    <button
-                      className={issueForm.severity === severity
-                        ? `issue-choice-chip issue-severity-chip ${getIssueSeverityToneClassName(severity)} active`
-                        : `issue-choice-chip issue-severity-chip ${getIssueSeverityToneClassName(severity)}`}
-                      type="button"
-                      role="radio"
-                      aria-checked={issueForm.severity === severity}
-                      key={severity}
-                      disabled={issueSaving}
-                      onClick={() => updateIssueField("severity", severity)}
-                    >
-                      <CapcomIcon name={getIssueSeverityIconName(severity)} size={18} weight="duotone" />
-                      <span>{severity}</span>
                     </button>
                   ))}
                 </div>

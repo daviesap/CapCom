@@ -2897,9 +2897,15 @@ textarea {
   flex-wrap: wrap;
   gap: var(--space-4);
   justify-content: flex-end;
+  margin-bottom: var(--space-6);
 }
 
-.issue-status-filter {
+.issue-panel-heading {
+  margin-bottom: var(--space-4);
+}
+
+.issue-status-filter,
+.issue-type-filter {
   align-items: center;
   display: inline-flex;
   flex-wrap: wrap;
@@ -2907,7 +2913,8 @@ textarea {
   justify-content: flex-end;
 }
 
-.issue-status-filter-menu {
+.issue-status-filter-menu,
+.issue-type-filter-menu {
   display: none;
   position: relative;
 }
@@ -3105,12 +3112,6 @@ textarea {
   color: var(--color-text-mid-muted);
 }
 
-.issue-status-open {
-  background: var(--color-primary-soft);
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-
 .issue-status-progress {
   background: var(--color-warning-bg);
   border-color: var(--color-warning-border);
@@ -3235,15 +3236,17 @@ textarea {
   .issue-panel-actions {
     align-items: center;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     width: 100%;
   }
 
-  .issue-status-filter {
+  .issue-status-filter,
+  .issue-type-filter {
     display: none;
   }
 
-  .issue-status-filter-menu {
+  .issue-status-filter-menu,
+  .issue-type-filter-menu {
     display: block;
     width: 100%;
   }
