@@ -312,6 +312,68 @@ service cloud.firestore {
         && isAssignableUserProfile(assignment);
     }
 
+    function issueHasValidShape(issue) {
+      return issue.keys().hasOnly([
+          "createdAt",
+          "createdBy",
+          "createdByName",
+          "detail",
+          "imagePath",
+          "imageUrl",
+          "severity",
+          "status",
+          "title",
+          "type",
+          "updatedAt"
+        ])
+        && issue.keys().hasAll([
+          "createdAt",
+          "createdBy",
+          "createdByName",
+          "detail",
+          "imagePath",
+          "imageUrl",
+          "severity",
+          "status",
+          "title",
+          "type",
+          "updatedAt"
+        ])
+        && issue.title is string
+        && issue.title.size() > 0
+        && issue.title.size() <= 180
+        && issue.detail is string
+        && issue.detail.size() <= 5000
+        && issue.imagePath is string
+        && issue.imagePath.size() <= 500
+        && issue.imageUrl is string
+        && issue.imageUrl.size() <= 2000
+        && issue.status in ["Open", "In progress", "Closed"]
+        && issue.type in ["Minor bug", "Major bug", "Notes", "Wishlist"]
+        && issue.severity in ["Major", "Hmmmm", "Minor"]
+        && issue.createdAt is timestamp
+        && issue.updatedAt is timestamp
+        && (issue.createdBy is string || issue.createdBy == null)
+        && issue.createdByName is string
+        && issue.createdByName.size() <= 200;
+    }
+
+    function canCreateIssue(issue) {
+      return isSuperAdmin()
+        && issueHasValidShape(issue)
+        && issue.createdAt == request.time
+        && issue.updatedAt == request.time;
+    }
+
+    function canUpdateIssue(existingIssue, nextIssue) {
+      return isSuperAdmin()
+        && issueHasValidShape(nextIssue)
+        && nextIssue.createdAt == existingIssue.createdAt
+        && nextIssue.createdBy == existingIssue.createdBy
+        && nextIssue.createdByName == existingIssue.createdByName
+        && nextIssue.updatedAt == request.time;
+    }
+
     match /users/{uid} {
       allow get, list: if canReadUserProfile(resource.data, uid);
       allow create: if canCreateUserProfile(request.resource.data);
@@ -334,6 +396,13 @@ service cloud.firestore {
     match /clients/{clientId} {
       allow get, list: if canReadClient(clientId);
       allow create, update: if canManageClient();
+      allow delete: if false;
+    }
+
+    match /issues/{issueId} {
+      allow get, list: if isSuperAdmin();
+      allow create: if canCreateIssue(request.resource.data);
+      allow update: if canUpdateIssue(resource.data, request.resource.data);
       allow delete: if false;
     }
 

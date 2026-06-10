@@ -6,6 +6,21 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function userPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function hasActiveProfile() {
+      return signedIn()
+        && firestore.exists(userPath())
+        && firestore.get(userPath()).data.isActive == true;
+    }
+
+    function isSuperAdmin() {
+      return hasActiveProfile()
+        && firestore.get(userPath()).data.role == "SuperAdmin";
+    }
+
     match /logos/{filePath=**} {
       allow read: if true;
       allow write: if signedIn()
@@ -16,6 +31,13 @@ service firebase.storage {
     match /event-images/{eventId}/{filePath=**} {
       allow read: if signedIn();
       allow write: if signedIn()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /issue-images/{issueId}/{filePath=**} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin()
         && request.resource.size < 2 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

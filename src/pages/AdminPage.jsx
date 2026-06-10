@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { USER_ROLES, canManageAssignments } from "../auth/roles.js";
 import Modal from "../components/Modal.jsx";
@@ -23,6 +23,17 @@ import {
   removeEventAssignment,
   setEventAssignment,
 } from "../services/eventAssignmentService.js";
+import {
+  ISSUE_DEFAULTS,
+  ISSUE_SEVERITIES,
+  ISSUE_STATUSES,
+  ISSUE_TYPES,
+  createIssue,
+  getIssues,
+  updateIssue,
+  updateIssueStatus,
+  validateIssueImageFile,
+} from "../services/issueService.js";
 
 const emptyClientForm = {
   clientName: "",
@@ -42,6 +53,12 @@ const emptyUserForm = {
   isActive: true,
 };
 
+const emptyIssueForm = {
+  ...ISSUE_DEFAULTS,
+};
+
+const ISSUE_STATUS_FILTERS = ["All", ...ISSUE_STATUSES];
+
 function slugifyClientName(clientName) {
   return clientName
     .trim()
@@ -57,6 +74,45 @@ function getClientName(clients, clientId) {
 
 function getSaveErrorMessage(error, fallbackMessage) {
   return error?.message || fallbackMessage;
+}
+
+function formatIssueDate(timestamp) {
+  const date = timestamp?.toDate ? timestamp.toDate() : null;
+  if (!date) return "Just now";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function getIssueStatusToneClassName(status) {
+  if (status === "Closed") return "issue-status-closed";
+  if (status === "In progress") return "issue-status-progress";
+  return "issue-status-open";
+}
+
+function getIssueStatusClassName(status) {
+  return `status-pill ${getIssueStatusToneClassName(status)}`;
+}
+
+function getIssueTypeIconName(type) {
+  if (type === "Major bug") return "issueMajorBug";
+  if (type === "Notes") return "issueNotes";
+  if (type === "Wishlist") return "issueWishlist";
+  return "issueMinorBug";
+}
+
+function getIssueSeverityIconName(severity) {
+  if (severity === "Major") return "issueSeverityMajor";
+  if (severity === "Hmmmm") return "issueSeverityMedium";
+  return "issueSeverityMinor";
+}
+
+function getIssueSeverityToneClassName(severity) {
+  if (severity === "Major") return "issue-severity-major";
+  if (severity === "Hmmmm") return "issue-severity-medium";
+  return "issue-severity-minor";
 }
 
 export default function AdminPage() {
@@ -92,12 +148,37 @@ export default function AdminPage() {
   const [assignmentEventIds, setAssignmentEventIds] = useState(new Set());
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
   const [assignmentsSaving, setAssignmentsSaving] = useState(false);
+  const [issues, setIssues] = useState([]);
+  const [issueForm, setIssueForm] = useState(emptyIssueForm);
+  const [issueImageFile, setIssueImageFile] = useState(null);
+  const [editingIssueId, setEditingIssueId] = useState("");
+  const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issueSaving, setIssueSaving] = useState(false);
+  const [issueUpdatingId, setIssueUpdatingId] = useState("");
+  const [activeIssueStatusMenuId, setActiveIssueStatusMenuId] = useState("");
+  const [issueStatusFilter, setIssueStatusFilter] = useState("All");
+  const [issueMessage, setIssueMessage] = useState("");
+  const [issueError, setIssueError] = useState("");
+  const issueFileInputRef = useRef(null);
 
   const selectableClients = useMemo(() => {
     if (isSuperAdmin) return clients;
     if (!userProfile?.clientId) return [];
     return clients.filter((client) => client.id === userProfile.clientId);
   }, [clients, isSuperAdmin, userProfile?.clientId]);
+
+  const issueStatusCounts = useMemo(() => {
+    return issues.reduce((counts, issue) => ({
+      ...counts,
+      [issue.status]: (counts[issue.status] || 0) + 1,
+    }), { All: issues.length });
+  }, [issues]);
+
+  const filteredIssues = useMemo(() => {
+    if (issueStatusFilter === "All") return issues;
+    return issues.filter((issue) => issue.status === issueStatusFilter);
+  }, [issues, issueStatusFilter]);
 
   const loadClients = async () => {
     setClientsLoading(true);
@@ -149,12 +230,35 @@ export default function AdminPage() {
     }
   };
 
+  const loadIssues = async () => {
+    if (!isSuperAdmin) {
+      setIssues([]);
+      return;
+    }
+
+    setIssuesLoading(true);
+    setIssueError("");
+    try {
+      setIssues(await getIssues({ limitCount: 50 }));
+    } catch (loadError) {
+      console.error(loadError);
+      setIssueError("Could not load issues.");
+    } finally {
+      setIssuesLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (profileLoading || !canManageUsers) return;
     loadClients();
     loadUsers();
     loadEventsForAssignments();
   }, [profileLoading, canManageUsers, userProfile]);
+
+  useEffect(() => {
+    if (profileLoading || !isSuperAdmin || activeAdminSection !== "issues") return;
+    loadIssues();
+  }, [profileLoading, isSuperAdmin, activeAdminSection]);
 
   const updateClientField = (field, value) => {
     setClientForm((current) => ({
@@ -468,13 +572,134 @@ export default function AdminPage() {
     }
   };
 
+  const updateIssueField = (field, value) => {
+    setIssueForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const resetIssueForm = () => {
+    setIssueForm(emptyIssueForm);
+    setIssueImageFile(null);
+    setEditingIssueId("");
+    if (issueFileInputRef.current) {
+      issueFileInputRef.current.value = "";
+    }
+  };
+
+  const openIssueForm = () => {
+    resetIssueForm();
+    setIssueMessage("");
+    setIssueError("");
+    setIsIssueFormOpen(true);
+  };
+
+  const openIssueEditForm = (issue) => {
+    setIssueForm({
+      title: issue.title || "",
+      detail: issue.detail || "",
+      status: issue.status || ISSUE_DEFAULTS.status,
+      type: issue.type || ISSUE_DEFAULTS.type,
+      severity: issue.severity || ISSUE_DEFAULTS.severity,
+    });
+    setEditingIssueId(issue.id);
+    setIssueImageFile(null);
+    if (issueFileInputRef.current) {
+      issueFileInputRef.current.value = "";
+    }
+    setIssueMessage("");
+    setIssueError("");
+    setActiveIssueStatusMenuId("");
+    setIsIssueFormOpen(true);
+  };
+
+  const closeIssueForm = () => {
+    if (issueSaving) return;
+    resetIssueForm();
+    setIsIssueFormOpen(false);
+  };
+
+  const setIssueImage = (file) => {
+    const validationError = validateIssueImageFile(file);
+    if (validationError) {
+      setIssueError(validationError);
+      setIssueImageFile(null);
+      if (issueFileInputRef.current) {
+        issueFileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    setIssueError("");
+    setIssueImageFile(file);
+  };
+
+  const handleIssuePaste = (pasteEvent) => {
+    const imageFile = Array.from(pasteEvent.clipboardData?.files || [])
+      .find((file) => file.type.startsWith("image/"));
+    if (!imageFile) return;
+
+    setIssueImage(imageFile);
+  };
+
+  const handleIssueSubmit = async (submitEvent) => {
+    submitEvent.preventDefault();
+    setIssueSaving(true);
+    setIssueMessage("");
+    setIssueError("");
+
+    try {
+      const isEditingIssue = Boolean(editingIssueId);
+      const savedIssue = isEditingIssue
+        ? await updateIssue(editingIssueId, issueForm, issueImageFile)
+        : await createIssue(issueForm, issueImageFile, userProfile);
+      resetIssueForm();
+      setIsIssueFormOpen(false);
+      await loadIssues();
+      if (savedIssue.imageUploadWarning) {
+        setIssueError(savedIssue.imageUploadWarning);
+      } else {
+        setIssueMessage(isEditingIssue ? "Issue updated." : "Issue added.");
+      }
+    } catch (saveError) {
+      console.error(saveError);
+      setIssueError(getSaveErrorMessage(saveError, "Could not save issue."));
+    } finally {
+      setIssueSaving(false);
+    }
+  };
+
+  const handleIssueStatusChange = async (issue, status) => {
+    setIssueUpdatingId(issue.id);
+    setIssueMessage("");
+    setIssueError("");
+
+    try {
+      await updateIssueStatus(issue.id, status);
+      setActiveIssueStatusMenuId("");
+      setIssues((currentIssues) =>
+        currentIssues.map((currentIssue) =>
+          currentIssue.id === issue.id
+            ? { ...currentIssue, status }
+            : currentIssue
+        )
+      );
+    } catch (saveError) {
+      console.error(saveError);
+      setIssueError("Could not update issue status.");
+    } finally {
+      setIssueUpdatingId("");
+    }
+  };
+
   useEffect(() => {
     if (profileLoading || !canManageUsers) return;
     resetUserForm();
   }, [profileLoading, canManageUsers, isAdmin, userProfile?.clientId]);
 
   useEffect(() => {
-    if (!isSuperAdmin && activeAdminSection === "clients") {
+    if (!isSuperAdmin && ["clients", "issues"].includes(activeAdminSection)) {
       setActiveAdminSection("users");
     }
   }, [activeAdminSection, isSuperAdmin]);
@@ -507,7 +732,8 @@ export default function AdminPage() {
             type="button"
             onClick={() => setActiveAdminSection("users")}
           >
-            Users
+            <CapcomIcon name="users" size={18} weight="duotone" />
+            <span>Users</span>
           </button>
           {isSuperAdmin ? (
             <button
@@ -515,7 +741,18 @@ export default function AdminPage() {
               type="button"
               onClick={() => setActiveAdminSection("clients")}
             >
-              Clients
+              <CapcomIcon name="company" size={18} weight="duotone" />
+              <span>Clients</span>
+            </button>
+          ) : null}
+          {isSuperAdmin ? (
+            <button
+              className={activeAdminSection === "issues" ? "tab active" : "tab"}
+              type="button"
+              onClick={() => setActiveAdminSection("issues")}
+            >
+              <CapcomIcon name="warning" size={18} weight="duotone" />
+              <span>Issues</span>
             </button>
           ) : null}
         </div>
@@ -674,6 +911,295 @@ export default function AdminPage() {
             </div>
           </section>
         </div>
+      ) : null}
+
+      {!profileLoading && isSuperAdmin && activeAdminSection === "issues" ? (
+        <div className="admin-grid">
+          <section className="panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Issues</h2>
+              </div>
+              <div className="issue-panel-actions">
+                <div className="issue-status-filter" aria-label="Filter issues by status">
+                  {ISSUE_STATUS_FILTERS.map((status) => (
+                    <button
+                      className={issueStatusFilter === status
+                        ? "issue-filter-button active"
+                        : "issue-filter-button"}
+                      type="button"
+                      key={status}
+                      aria-pressed={issueStatusFilter === status}
+                      onClick={() => {
+                        setIssueStatusFilter(status);
+                        setActiveIssueStatusMenuId("");
+                      }}
+                    >
+                      {status !== "All" ? (
+                        <span
+                          className={`issue-status-dot ${getIssueStatusToneClassName(status)}`}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <span>{status}</span>
+                      <span className="issue-filter-count">{issueStatusCounts[status] || 0}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {!isIssueFormOpen ? (
+                  <button
+                    className="button admin-add-issue-button"
+                    type="button"
+                    aria-label="Add new issue"
+                    disabled={issueSaving}
+                    onClick={openIssueForm}
+                  >
+                    <CapcomIcon name="add" size={18} weight="bold" />
+                    <span className="button-label">Add Issue</span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {issueError ? <p className="error">{issueError}</p> : null}
+            {issueMessage ? <p className="message success-message">{issueMessage}</p> : null}
+
+            {issuesLoading ? <p className="message">Loading issues...</p> : null}
+            {!issuesLoading && !issueError && issues.length === 0 ? (
+              <p className="message">No issues yet.</p>
+            ) : null}
+            {!issuesLoading && !issueError && issues.length > 0 && filteredIssues.length === 0 ? (
+              <p className="message">No {issueStatusFilter.toLowerCase()} issues.</p>
+            ) : null}
+
+            {!issuesLoading && filteredIssues.length > 0 ? (
+              <div className="issue-list">
+                {filteredIssues.map((issue) => (
+                  <article className="issue-list-row" key={issue.id}>
+                    <div className="issue-card-main">
+                      {issue.imageUrl ? (
+                        <a
+                          className="issue-image-link"
+                          href={issue.imageUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                          aria-label={`Open image for ${issue.title}`}
+                        >
+                          <img className="issue-image" src={issue.imageUrl} alt="" />
+                        </a>
+                      ) : null}
+                      <span className="issue-type-icon" aria-hidden="true">
+                        <CapcomIcon name={getIssueTypeIconName(issue.type)} size={20} weight="duotone" />
+                      </span>
+                      <div className="issue-card-copy">
+                        <div className="client-title-line">
+                          <h3>{issue.title}</h3>
+                          <span className={getIssueStatusClassName(issue.status)}>{issue.status}</span>
+                        </div>
+                        <p className="item-meta">
+                          {formatIssueDate(issue.createdAt)} | {issue.type} | {issue.severity}
+                        </p>
+                        {issue.detail ? (
+                          <p className="issue-detail">{issue.detail}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="issue-actions">
+                      <button
+                        className="button secondary issue-edit-button"
+                        type="button"
+                        aria-label={`Edit ${issue.title}`}
+                        disabled={issueSaving}
+                        onClick={() => openIssueEditForm(issue)}
+                      >
+                        <CapcomIcon name="edit" size={18} weight="bold" />
+                        <span className="button-label">Edit</span>
+                      </button>
+                      <div
+                        className="issue-status-menu"
+                        onBlur={(event) => {
+                          if (!event.currentTarget.contains(event.relatedTarget)) {
+                            setActiveIssueStatusMenuId("");
+                          }
+                        }}
+                      >
+                        <button
+                          className="issue-status-trigger"
+                          type="button"
+                          aria-expanded={activeIssueStatusMenuId === issue.id}
+                          aria-haspopup="menu"
+                          aria-label={`Status for ${issue.title}`}
+                          disabled={issueUpdatingId === issue.id}
+                          onClick={() => {
+                            setActiveIssueStatusMenuId((currentIssueId) =>
+                              currentIssueId === issue.id ? "" : issue.id
+                            );
+                          }}
+                        >
+                          <span
+                            className={`issue-status-dot ${getIssueStatusToneClassName(issue.status)}`}
+                            aria-hidden="true"
+                          />
+                          <span>{issue.status}</span>
+                          <CapcomIcon name="caretRight" size={16} weight="bold" />
+                        </button>
+
+                        {activeIssueStatusMenuId === issue.id ? (
+                          <div className="issue-status-options" role="menu">
+                            {ISSUE_STATUSES.map((status) => (
+                              <button
+                                className="issue-status-option"
+                                type="button"
+                                role="menuitem"
+                                key={status}
+                                disabled={issueUpdatingId === issue.id}
+                                onClick={() => handleIssueStatusChange(issue, status)}
+                              >
+                                <span
+                                  className={`issue-status-dot ${getIssueStatusToneClassName(status)}`}
+                                  aria-hidden="true"
+                                />
+                                <span>{status}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {isIssueFormOpen ? (
+        <Modal
+          title={editingIssueId ? "Edit Issue" : "Add Issue"}
+          subtitle=""
+          labelledBy="issueFormTitle"
+          closeLabel="Close issue form"
+          onClose={closeIssueForm}
+        >
+          <form className="admin-inline-form issue-form" onSubmit={handleIssueSubmit}>
+            <div className="form-row">
+              <label htmlFor="issueTitle">Title</label>
+              <input
+                id="issueTitle"
+                value={issueForm.title}
+                disabled={issueSaving}
+                onChange={(event) => updateIssueField("title", event.target.value)}
+                onPaste={handleIssuePaste}
+                placeholder="Brief issue title"
+                required
+              />
+            </div>
+
+            <div className="form-grid issue-form-grid">
+              <div className="form-row full">
+                <label htmlFor="issueDetail">Detail</label>
+                <textarea
+                  id="issueDetail"
+                  value={issueForm.detail}
+                  disabled={issueSaving}
+                  onChange={(event) => updateIssueField("detail", event.target.value)}
+                  onPaste={handleIssuePaste}
+                  placeholder="Optional context, steps or notes"
+                  rows={3}
+                />
+              </div>
+              <div className="form-row full">
+                <span className="field-label" id="issueTypeLabel">Type</span>
+                <div
+                  className="issue-type-chips"
+                  role="radiogroup"
+                  aria-labelledby="issueTypeLabel"
+                >
+                  {ISSUE_TYPES.map((type) => (
+                    <button
+                      className={issueForm.type === type
+                        ? "issue-choice-chip issue-type-chip active"
+                        : "issue-choice-chip issue-type-chip"}
+                      type="button"
+                      role="radio"
+                      aria-checked={issueForm.type === type}
+                      key={type}
+                      disabled={issueSaving}
+                      onClick={() => updateIssueField("type", type)}
+                    >
+                      <CapcomIcon name={getIssueTypeIconName(type)} size={18} weight="duotone" />
+                      <span>{type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-row full">
+                <span className="field-label" id="issueSeverityLabel">Severity</span>
+                <div
+                  className="issue-choice-chips"
+                  role="radiogroup"
+                  aria-labelledby="issueSeverityLabel"
+                >
+                  {ISSUE_SEVERITIES.map((severity) => (
+                    <button
+                      className={issueForm.severity === severity
+                        ? `issue-choice-chip issue-severity-chip ${getIssueSeverityToneClassName(severity)} active`
+                        : `issue-choice-chip issue-severity-chip ${getIssueSeverityToneClassName(severity)}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={issueForm.severity === severity}
+                      key={severity}
+                      disabled={issueSaving}
+                      onClick={() => updateIssueField("severity", severity)}
+                    >
+                      <CapcomIcon name={getIssueSeverityIconName(severity)} size={18} weight="duotone" />
+                      <span>{severity}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-row">
+                <label htmlFor="issueImage">Image</label>
+                <input
+                  id="issueImage"
+                  ref={issueFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  disabled={issueSaving}
+                  onChange={(event) => setIssueImage(event.target.files?.[0] || null)}
+                />
+                <p className="item-meta">
+                  {issueImageFile
+                    ? issueImageFile.name
+                    : editingIssueId
+                      ? "Optional. Choose or paste a new screenshot to replace the current image."
+                      : "Optional. You can also paste a screenshot."}
+                </p>
+              </div>
+            </div>
+
+            <div className="actions">
+              <button
+                className="button"
+                type="submit"
+                disabled={issueSaving || !issueForm.title.trim()}
+              >
+                <CapcomIcon name={editingIssueId ? "edit" : "add"} size={18} weight="bold" />
+                {issueSaving ? "Saving..." : editingIssueId ? "Save Issue" : "Add Issue"}
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                disabled={issueSaving}
+                onClick={closeIssueForm}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Modal>
       ) : null}
 
       {!profileLoading && canManageUsers && activeAdminSection === "users" ? (
