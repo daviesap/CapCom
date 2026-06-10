@@ -346,7 +346,7 @@ service cloud.firestore {
         && issue.imagePath.size() <= 500
         && issue.imageUrl is string
         && issue.imageUrl.size() <= 2000
-        && issue.status in ["In progress", "Closed"]
+        && issue.status in ["Open", "Closed"]
         && issue.type in ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"]
         && issue.createdAt is timestamp
         && issue.updatedAt is timestamp

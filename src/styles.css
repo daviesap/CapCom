@@ -3112,10 +3112,10 @@ textarea {
   color: var(--color-text-mid-muted);
 }
 
-.issue-status-progress {
-  background: var(--color-warning-bg);
-  border-color: var(--color-warning-border);
-  color: var(--color-warning-text);
+.issue-status-open {
+  background: var(--color-primary-soft);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .issue-status-closed {

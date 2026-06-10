@@ -88,7 +88,7 @@ function formatIssueDate(timestamp) {
 
 function getIssueStatusToneClassName(status) {
   if (status === "Closed") return "issue-status-closed";
-  return "issue-status-progress";
+  return "issue-status-open";
 }
 
 function getIssueFilterStatusToneClassName(status) {
