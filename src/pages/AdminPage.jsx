@@ -92,6 +92,11 @@ function getIssueStatusToneClassName(status) {
   return "issue-status-open";
 }
 
+function getIssueFilterStatusToneClassName(status) {
+  if (status === "All") return "issue-status-all";
+  return getIssueStatusToneClassName(status);
+}
+
 function getIssueStatusClassName(status) {
   return `status-pill ${getIssueStatusToneClassName(status)}`;
 }
@@ -157,6 +162,7 @@ export default function AdminPage() {
   const [issueSaving, setIssueSaving] = useState(false);
   const [issueUpdatingId, setIssueUpdatingId] = useState("");
   const [activeIssueStatusMenuId, setActiveIssueStatusMenuId] = useState("");
+  const [isIssueFilterMenuOpen, setIsIssueFilterMenuOpen] = useState(false);
   const [issueStatusFilter, setIssueStatusFilter] = useState("All");
   const [issueMessage, setIssueMessage] = useState("");
   const [issueError, setIssueError] = useState("");
@@ -933,6 +939,7 @@ export default function AdminPage() {
                       onClick={() => {
                         setIssueStatusFilter(status);
                         setActiveIssueStatusMenuId("");
+                        setIsIssueFilterMenuOpen(false);
                       }}
                     >
                       {status !== "All" ? (
@@ -945,6 +952,63 @@ export default function AdminPage() {
                       <span className="issue-filter-count">{issueStatusCounts[status] || 0}</span>
                     </button>
                   ))}
+                </div>
+                <div
+                  className="issue-status-filter-menu"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      setIsIssueFilterMenuOpen(false);
+                    }
+                  }}
+                >
+                  <button
+                    className="issue-status-trigger issue-filter-trigger"
+                    type="button"
+                    aria-expanded={isIssueFilterMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Filter issues by status"
+                    onClick={() => {
+                      setIsIssueFilterMenuOpen((isOpen) => !isOpen);
+                      setActiveIssueStatusMenuId("");
+                    }}
+                  >
+                    <span className="issue-filter-trigger-label">
+                      <span
+                        className={`issue-status-dot ${getIssueFilterStatusToneClassName(issueStatusFilter)}`}
+                        aria-hidden="true"
+                      />
+                      <span>{issueStatusFilter}</span>
+                      <span className="issue-filter-count">{issueStatusCounts[issueStatusFilter] || 0}</span>
+                    </span>
+                    <CapcomIcon name="caretRight" size={16} weight="bold" />
+                  </button>
+
+                  {isIssueFilterMenuOpen ? (
+                    <div className="issue-status-options issue-filter-options" role="menu">
+                      {ISSUE_STATUS_FILTERS.map((status) => (
+                        <button
+                          className={issueStatusFilter === status
+                            ? "issue-status-option issue-filter-option active"
+                            : "issue-status-option issue-filter-option"}
+                          type="button"
+                          role="menuitem"
+                          key={status}
+                          onClick={() => {
+                            setIssueStatusFilter(status);
+                            setIsIssueFilterMenuOpen(false);
+                            setActiveIssueStatusMenuId("");
+                          }}
+                        >
+                          <span
+                            className={`issue-status-dot ${getIssueFilterStatusToneClassName(status)}`}
+                            aria-hidden="true"
+                          />
+                          <span>{status}</span>
+                          <span className="issue-filter-count">{issueStatusCounts[status] || 0}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 {!isIssueFormOpen ? (
@@ -1032,6 +1096,7 @@ export default function AdminPage() {
                           aria-label={`Status for ${issue.title}`}
                           disabled={issueUpdatingId === issue.id}
                           onClick={() => {
+                            setIsIssueFilterMenuOpen(false);
                             setActiveIssueStatusMenuId((currentIssueId) =>
                               currentIssueId === issue.id ? "" : issue.id
                             );
