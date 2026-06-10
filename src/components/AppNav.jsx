@@ -10,10 +10,12 @@ const navItems = [
 ];
 
 export default function AppNav({ variant, collapsed = false }) {
-  const { isSuperAdmin, isAdmin, user, userProfile } = useAuth();
+  const { isSuperAdmin, isAdmin, user, userProfile, activeClient, activeClientLoading } = useAuth();
   const canAccessAdmin = isSuperAdmin || isAdmin;
   const visibleNavItems = navItems.filter((item) => !item.requiresAdmin || canAccessAdmin);
   const loggedInName = userProfile?.displayName || user?.displayName || userProfile?.email || user?.email || "";
+  const activeClientLabel = activeClient?.clientName
+    || (activeClientLoading ? "client..." : "No client selected");
 
   return (
     <div
@@ -32,7 +34,12 @@ export default function AppNav({ variant, collapsed = false }) {
         </NavLink>
       ))}
       {variant === "desktop" && loggedInName ? (
-        <p className="sidebar-login-meta">Logged in as {loggedInName}</p>
+        <div className="sidebar-meta">
+          <p className="sidebar-login-meta">Logged in as {loggedInName}</p>
+          {isSuperAdmin ? (
+            <p className="sidebar-client-meta">Viewing {activeClientLabel}</p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

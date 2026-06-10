@@ -14,7 +14,14 @@ const adminAuth = getAuth();
 
 const OLD_PDF_GENERATOR_API_KEY = defineSecret("OLD_PDF_GENERATOR_API_KEY");
 const DEFAULT_OLD_V2_GENERATE_HOME_URL =
-  "https://europe-west2-flair-pdf-generator.cloudfunctions.net/v2?action=generateHome";
+  "https://api.capcom.london/v2?action=generateHome";
+const CALLABLE_ALLOWED_ORIGINS = [
+  "https://app.capcom.london",
+  "https://capcom-d2cc0.web.app",
+  "https://capcom-d2cc0.firebaseapp.com",
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+];
 
 const USER_ROLES = {
   SUPER_ADMIN: "SuperAdmin",
@@ -97,6 +104,7 @@ async function requireActiveClient(clientId) {
 
 export const createAuthUserProfile = onCall({
   region: "europe-west2",
+  cors: CALLABLE_ALLOWED_ORIGINS,
   invoker: "public",
 }, async (request) => {
   if (!request.auth?.uid) {
@@ -169,6 +177,7 @@ export const createAuthUserProfile = onCall({
 
 export const generateHomeForEvent = onCall({
   region: "europe-west2",
+  cors: CALLABLE_ALLOWED_ORIGINS,
   invoker: "public",
   secrets: [OLD_PDF_GENERATOR_API_KEY],
   timeoutSeconds: 540,

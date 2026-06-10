@@ -90,10 +90,12 @@ export default function ProfilePage() {
                   <select
                     id="profileActiveClientId"
                     value={activeClientId}
+                    required
+                    aria-required="true"
                     disabled={activeClientLoading || clients.length === 0}
                     onChange={(event) => setActiveClientId(event.target.value)}
                   >
-                    <option value="">
+                    <option value="" disabled>
                       {activeClientLoading ? "Loading clients..." : "Choose a client"}
                     </option>
                     {clients.map((client) => (

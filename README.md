@@ -18,6 +18,17 @@ Target project:
 capcom-d2cc0
 ```
 
+Live web app:
+
+```text
+https://app.capcom.london/
+```
+
+Firebase Console should include `app.capcom.london` in:
+
+- Hosting custom domains
+- Authentication > Settings > Authorized domains
+
 Enable these services in Firebase Console before first deploy:
 
 - Firebase Authentication with Email/password

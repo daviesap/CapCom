@@ -183,10 +183,15 @@ export function AuthProvider({ children }) {
   }, [profileLoading, userProfile]);
 
   const setActiveClientId = useCallback((clientId) => {
-    const nextClientId = clientId || "";
+    if (!isSuperAdmin(userProfile)) return;
+
+    const requestedClientId = clientId || "";
+    const nextClientId = clients.some((client) => client.id === requestedClientId)
+      ? requestedClientId
+      : chooseDefaultClientId(clients);
     setActiveClientIdState(nextClientId);
     setActiveClient(clients.find((client) => client.id === nextClientId) || null);
-    if (isSuperAdmin(userProfile)) storeActiveClientId(nextClientId);
+    storeActiveClientId(nextClientId);
   }, [clients, userProfile]);
 
   const value = useMemo(() => {
