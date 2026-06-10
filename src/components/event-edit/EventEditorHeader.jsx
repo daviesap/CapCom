@@ -63,7 +63,7 @@ export default function EventEditorHeader({
           closeLabel="Close event edit form"
           onClose={onCancel}
         >
-        <form className="event-header-form" onSubmit={onSubmit}>
+        <form className="event-header-form" onSubmit={onSubmit} noValidate>
           <div className="form-grid">
             <div className="form-row">
               <label htmlFor="editName">Name</label>
@@ -81,7 +81,6 @@ export default function EventEditorHeader({
                 id="editClientName"
                 value={form.clientName}
                 disabled
-                required
               />
             </div>
             <div className="form-row">

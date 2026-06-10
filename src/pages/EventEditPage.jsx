@@ -118,6 +118,22 @@ const emptyEventForm = {
   apiResponse: null,
 };
 
+function validateEventForm(eventForm, userProfile) {
+  if (!eventForm.name.trim()) return "Event name is required.";
+  if (!eventForm.startDate) return "First live day is required.";
+  if (!eventForm.endDate) return "Last live day is required.";
+  if (!eventForm.scheduleStartDate) return "Schedule start date is required.";
+  if (!eventForm.scheduleEndDate) return "Schedule end date is required.";
+  if (userProfile?.role === "SuperAdmin" && !eventForm.clientId) return "Event client is required.";
+  if (eventForm.startDate > eventForm.endDate) {
+    return "Event start date must be before or equal to event end date.";
+  }
+  if (eventForm.scheduleStartDate > eventForm.scheduleEndDate) {
+    return "Schedule start date must be before or equal to schedule end date.";
+  }
+  return "";
+}
+
 const eventEditTabs = [
   { id: "info", label: "Info", icon: "info" },
   { id: "summary", label: "Summary", icon: "summary" },
@@ -4342,13 +4358,9 @@ export default function EventEditPage() {
     setError("");
 
     try {
-      if (form.startDate > form.endDate) {
-        setError("Event start date must be before or equal to event end date.");
-        return;
-      }
-
-      if (form.scheduleStartDate > form.scheduleEndDate) {
-        setError("Schedule start date must be before or equal to schedule end date.");
+      const validationMessage = validateEventForm(form, userProfile);
+      if (validationMessage) {
+        setError(validationMessage);
         return;
       }
 
