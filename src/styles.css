@@ -544,6 +544,50 @@ summary:focus-visible {
   color: var(--color-warning-text);
 }
 
+.app-update-prompt {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: var(--space-7);
+  justify-content: space-between;
+  left: 50%;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: var(--space-5);
+  position: fixed;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 90;
+}
+
+.app-update-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.app-update-copy strong {
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-tight);
+}
+
+.app-update-copy span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-copy);
+}
+
+.app-update-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-3);
+}
+
 .page {
   margin: 0 auto;
   max-width: var(--page-max-width);
