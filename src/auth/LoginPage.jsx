@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <div className="login-panel">
-        <img className="login-logo" src="/icon-512x512.png" alt="CapCom" />
+        <img className="login-logo" src="/flair-logo.png" alt="Flair" />
 
         <form className="login-card" onSubmit={handleSubmit}>
           <h3 className="page-title">Welcome</h3>

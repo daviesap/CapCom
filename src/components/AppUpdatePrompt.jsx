@@ -16,7 +16,6 @@ export default function AppUpdatePrompt() {
     <div className="app-update-prompt" role="status" aria-live="polite">
       <div className="app-update-copy">
         <strong>App update available</strong>
-        <span>Reload to use the latest CapCom app version.</span>
       </div>
       <div className="app-update-actions">
         <button

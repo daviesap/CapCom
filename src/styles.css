@@ -3495,6 +3495,11 @@ textarea {
   width: 100%;
 }
 
+.login-card .page-title,
+.login-card .page-subtitle {
+  text-align: center;
+}
+
 .login-credit {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
