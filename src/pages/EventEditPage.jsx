@@ -615,7 +615,7 @@ export default function EventEditPage() {
   const [truckSizesLoading, setTruckSizesLoading] = useState(false);
   const [trucksLoading, setTrucksLoading] = useState(false);
   const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [companyContactsLoading, setCompanyContactsLoading] = useState(false);
+  const [, setCompanyContactsLoading] = useState(false);
   const [eventContactsLoading, setEventContactsLoading] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
   const [importingSchedule, setImportingSchedule] = useState(false);
@@ -4676,19 +4676,6 @@ export default function EventEditPage() {
         error={error}
         warning={warning}
         isOffline={isWriteDisabled}
-        isSuperAdmin={isSuperAdmin}
-        clientId={form.clientId}
-        activeTab={activeTab}
-        activeInfoTab={activeInfoTab}
-        detailsLoading={detailsLoading}
-        tagsLoading={tagsLoading}
-        locationsLoading={locationsLoading}
-        trucksLoading={trucksLoading}
-        companiesLoading={companiesLoading}
-        contactCompaniesLoading={companyContactsLoading || eventContactsLoading}
-        truckSizesLoading={truckSizesLoading}
-        filteredViewsLoading={filteredViewsLoading}
-        shareArchiveLoading={shareArchiveLoading}
       />
 
       <EventEditorTabs

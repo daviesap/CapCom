@@ -1095,6 +1095,32 @@ textarea {
   justify-content: space-between;
 }
 
+.day-collapse-trigger {
+  align-items: flex-start;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--space-3);
+  padding: 0;
+  text-align: left;
+}
+
+.day-collapse-trigger .accordion-indicator {
+  color: var(--color-text-muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding-top: 3px;
+}
+
+.day-collapse-trigger:focus-visible {
+  border-radius: var(--radius-xs);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
 .day-card-content {
   width: 100%;
 }
@@ -1665,6 +1691,47 @@ textarea {
 
 .detail-description-cell[data-tooltip=""]::after {
   display: none;
+}
+
+.detail-description-preview-text {
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-copy);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.detail-description-preview-meta {
+  border-top: 1px solid var(--color-divider);
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-7) 0 0;
+  padding-top: var(--space-7);
+}
+
+.detail-description-preview-meta-row {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.detail-description-preview-meta dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.detail-description-preview-meta dd {
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-copy);
+  margin: 0;
+  min-width: 0;
+}
+
+.detail-description-preview-actions {
+  justify-content: flex-end;
+  margin-top: var(--space-8);
 }
 
 .detail-row-actions {
@@ -4266,7 +4333,6 @@ textarea {
   .detail-time-display,
   .detail-time-input {
     align-items: center;
-    background: var(--color-control-soft-alpha);
     border: 0;
     border-radius: var(--radius-md-plus);
     color: var(--color-text);
@@ -4282,23 +4348,34 @@ textarea {
     width: 54px;
   }
 
+  .detail-time-display {
+    background: transparent;
+  }
+
+  .detail-time-input {
+    background: var(--color-control-soft-alpha);
+  }
+
   .detail-description-cell,
   .detail-row > .plain-input:not(.detail-time-input) {
     align-items: center;
     border: 0;
     color: var(--color-text);
     font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
     grid-column: 2;
     grid-row: 1;
     min-height: 40px;
     padding: 0;
-    white-space: normal;
+  }
+
+  .detail-description-cell {
+    white-space: nowrap;
   }
 
   .detail-description-text {
-    overflow: visible;
-    text-overflow: clip;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .truck-action-cell {

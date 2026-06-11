@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Modal from "../Modal.jsx";
 import DetailRowActions from "./DetailRowActions.jsx";
 
 function createDetailDragPreview(rowElement) {
@@ -113,8 +114,6 @@ export default function DetailRow({
   const selectableTag = tags.some((tag) => tag.id === detail.tagId)
     ? getTagById(detail.tagId)
     : null;
-  const tagLabel = selectableTag?.name || "No tag";
-  const locationLabel = getLocationById(detail.locationId)?.displayName || "No location";
   const companyLabel = getCompanyLabel(detail.companyIds || []);
   const truckDestinationValue = String(getTruckDestinationValue(detail) || "");
   const truckDestinationLabel = truckDestinationValue.startsWith("company:")
@@ -122,11 +121,25 @@ export default function DetailRow({
     : truckDestinationValue.startsWith("location:")
       ? getLocationById(truckDestinationValue.replace("location:", ""))?.displayName || "No destination"
       : "No destination";
+  const mobileTagLabel = selectableTag?.name || "";
+  const mobileLocationLabel = getLocationById(detail.locationId)?.displayName || "";
+  const mobileCompanyLabel = companyLabel === "No company" ? "" : companyLabel;
+  const mobileTruckDestinationLabel = truckDestinationLabel === "No destination" ? "" : truckDestinationLabel;
   const mobileMetaLabels = isTruckRow
-    ? [truckDestinationLabel]
-    : [tagLabel, locationLabel, companyLabel].filter(Boolean);
+    ? [mobileTruckDestinationLabel].filter(Boolean)
+    : [mobileTagLabel, mobileLocationLabel, mobileCompanyLabel].filter(Boolean);
+  const previewCompanyNames = (detail.companyIds || [])
+    .map((companyId) => companyById.get(companyId)?.companyName || "")
+    .filter(Boolean)
+    .join(", ");
+  const previewMetaItems = [
+    mobileTagLabel ? ["Tag", mobileTagLabel] : null,
+    mobileLocationLabel ? ["Location", mobileLocationLabel] : null,
+    previewCompanyNames ? ["Company", previewCompanyNames] : null,
+  ].filter(Boolean);
   const dragPreviewRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [previewDescription, setPreviewDescription] = useState("");
   const canDragRow =
     !isMobileView && !isEditingTime && !isEditingDescription && !isOffline;
 
@@ -148,55 +161,56 @@ export default function DetailRow({
   };
 
   return (
-    <div
-      className="detail-row draggable-row"
-      style={rowStyle}
-      draggable={canDragRow}
-      onDragStart={(event) => {
-        if (!canDragRow) {
-          event.preventDefault();
-          return;
-        }
-        draggedDetailIdRef.current = detail.id;
-        event.dataTransfer.effectAllowed = "move";
-        clearDragPreview();
-        const dragPreview = createDetailDragPreview(event.currentTarget);
-        if (dragPreview) {
-          const rowRect = event.currentTarget.getBoundingClientRect();
-          dragPreviewRef.current = dragPreview;
-          if (event.dataTransfer.setDragImage) {
-            event.dataTransfer.setDragImage(
-              dragPreview,
-              Math.max(0, Math.min(event.clientX - rowRect.left, dragPreview.offsetWidth)),
-              Math.max(0, Math.min(event.clientY - rowRect.top, dragPreview.offsetHeight))
-            );
+    <>
+      <div
+        className="detail-row draggable-row"
+        style={rowStyle}
+        draggable={canDragRow}
+        onDragStart={(event) => {
+          if (!canDragRow) {
+            event.preventDefault();
+            return;
           }
-        }
-      }}
-      onDragOver={(event) => {
-        const draggedDetail = dayDetails.find(
-          (nextDetail) => nextDetail.id === draggedDetailIdRef.current
-        );
-        if (
-          draggedDetail &&
-          draggedDetail.id !== detail.id &&
-          (draggedDetail.time || "") === (detail.time || "")
-        ) {
+          draggedDetailIdRef.current = detail.id;
+          event.dataTransfer.effectAllowed = "move";
+          clearDragPreview();
+          const dragPreview = createDetailDragPreview(event.currentTarget);
+          if (dragPreview) {
+            const rowRect = event.currentTarget.getBoundingClientRect();
+            dragPreviewRef.current = dragPreview;
+            if (event.dataTransfer.setDragImage) {
+              event.dataTransfer.setDragImage(
+                dragPreview,
+                Math.max(0, Math.min(event.clientX - rowRect.left, dragPreview.offsetWidth)),
+                Math.max(0, Math.min(event.clientY - rowRect.top, dragPreview.offsetHeight))
+              );
+            }
+          }
+        }}
+        onDragOver={(event) => {
+          const draggedDetail = dayDetails.find(
+            (nextDetail) => nextDetail.id === draggedDetailIdRef.current
+          );
+          if (
+            draggedDetail &&
+            draggedDetail.id !== detail.id &&
+            (draggedDetail.time || "") === (detail.time || "")
+          ) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+          }
+        }}
+        onDrop={(event) => {
           event.preventDefault();
-          event.dataTransfer.dropEffect = "move";
-        }
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        reorderDetail(day.id, draggedDetailIdRef.current, detail.id);
-        draggedDetailIdRef.current = "";
-        clearDragPreview();
-      }}
-      onDragEnd={() => {
-        draggedDetailIdRef.current = "";
-        clearDragPreview();
-      }}
-    >
+          reorderDetail(day.id, draggedDetailIdRef.current, detail.id);
+          draggedDetailIdRef.current = "";
+          clearDragPreview();
+        }}
+        onDragEnd={() => {
+          draggedDetailIdRef.current = "";
+          clearDragPreview();
+        }}
+      >
       {isEditingTime ? (
         <input
           ref={detailCellInputRef}
@@ -293,14 +307,23 @@ export default function DetailRow({
           type="button"
           data-tooltip={detail.description || ""}
           disabled={isOffline}
-          onClick={() => startEditingDetailCell(day.id, detail.id, "description")}
+          onClick={() => {
+            if (isMobileView) {
+              setPreviewDescription(detail.description || "");
+              return;
+            }
+
+            startEditingDetailCell(day.id, detail.id, "description");
+          }}
         >
           <span className="detail-description-text">{detail.description || ""}</span>
         </button>
       )}
-      <span className="mobile-detail-meta-line">
-        {mobileMetaLabels.join(" · ")}
-      </span>
+      {mobileMetaLabels.length > 0 ? (
+        <span className="mobile-detail-meta-line">
+          {mobileMetaLabels.join(" · ")}
+        </span>
+      ) : null}
       {!isTruckRow && showTagColumn ? (
         <>
           <div
@@ -443,6 +466,35 @@ export default function DetailRow({
         closeActionMenu={closeActionMenu}
         deleteDetail={deleteDetail}
       />
-    </div>
+      </div>
+      {previewDescription ? (
+        <Modal
+          title={detail.time || "Detail"}
+          labelledBy={`detail-preview-${detail.id}`}
+          onClose={() => setPreviewDescription("")}
+        >
+          <p className="detail-description-preview-text">{previewDescription}</p>
+          {previewMetaItems.length > 0 ? (
+            <dl className="detail-description-preview-meta">
+              {previewMetaItems.map(([label, value]) => (
+                <div className="detail-description-preview-meta-row" key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          <div className="actions detail-description-preview-actions">
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => setPreviewDescription("")}
+            >
+              Close
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   );
 }

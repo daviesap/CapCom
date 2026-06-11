@@ -2,28 +2,8 @@ export default function EventEditorStatusMessages({
   error,
   warning,
   isOffline,
-  detailsLoading,
-  tagsLoading,
-  locationsLoading,
-  trucksLoading,
-  companiesLoading,
-  contactCompaniesLoading,
-  truckSizesLoading,
-  filteredViewsLoading,
-  shareArchiveLoading,
 }) {
-  const isLoadingSupportingData =
-    detailsLoading ||
-    tagsLoading ||
-    locationsLoading ||
-    trucksLoading ||
-    companiesLoading ||
-    contactCompaniesLoading ||
-    truckSizesLoading ||
-    filteredViewsLoading ||
-    shareArchiveLoading;
-
-  if (!error && !warning && !isOffline && !isLoadingSupportingData) {
+  if (!error && !warning && !isOffline) {
     return null;
   }
 
@@ -33,9 +13,6 @@ export default function EventEditorStatusMessages({
       {warning ? <p className="message warning-message">{warning}</p> : null}
       {isOffline ? (
         <p className="message offline-message">Offline mode: event editing is disabled.</p>
-      ) : null}
-      {isLoadingSupportingData ? (
-        <p className="message">Loading event data...</p>
       ) : null}
     </div>
   );
