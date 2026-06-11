@@ -145,6 +145,8 @@ export default function AdminPage() {
   const [issues, setIssues] = useState([]);
   const [issueForm, setIssueForm] = useState(emptyIssueForm);
   const [issueImageFile, setIssueImageFile] = useState(null);
+  const [currentIssueImage, setCurrentIssueImage] = useState({ path: "", url: "" });
+  const [isIssueImageRemoved, setIsIssueImageRemoved] = useState(false);
   const [editingIssueId, setEditingIssueId] = useState("");
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
   const [issuesLoading, setIssuesLoading] = useState(false);
@@ -567,6 +569,8 @@ export default function AdminPage() {
   const resetIssueForm = () => {
     setIssueForm(emptyIssueForm);
     setIssueImageFile(null);
+    setCurrentIssueImage({ path: "", url: "" });
+    setIsIssueImageRemoved(false);
     setEditingIssueId("");
     if (issueFileInputRef.current) {
       issueFileInputRef.current.value = "";
@@ -588,6 +592,11 @@ export default function AdminPage() {
     });
     setEditingIssueId(issue.id);
     setIssueImageFile(null);
+    setCurrentIssueImage({
+      path: issue.imagePath || "",
+      url: issue.imageUrl || "",
+    });
+    setIsIssueImageRemoved(false);
     if (issueFileInputRef.current) {
       issueFileInputRef.current.value = "";
     }
@@ -615,6 +624,15 @@ export default function AdminPage() {
 
     setIssueError("");
     setIssueImageFile(file);
+    setIsIssueImageRemoved(false);
+  };
+
+  const removeIssueImage = () => {
+    setIssueImageFile(null);
+    setIsIssueImageRemoved(true);
+    if (issueFileInputRef.current) {
+      issueFileInputRef.current.value = "";
+    }
   };
 
   const handleIssuePaste = (pasteEvent) => {
@@ -633,7 +651,11 @@ export default function AdminPage() {
     try {
       const isEditingIssue = Boolean(editingIssueId);
       const savedIssue = isEditingIssue
-        ? await updateIssue(editingIssueId, issueForm, issueImageFile)
+        ? await updateIssue(editingIssueId, issueForm, issueImageFile, {
+            existingImagePath: currentIssueImage.path,
+            existingImageUrl: currentIssueImage.url,
+            removeImage: isIssueImageRemoved && !issueImageFile,
+          })
         : await createIssue(issueForm, issueImageFile, userProfile);
       resetIssueForm();
       setIsIssueFormOpen(false);
@@ -656,7 +678,7 @@ export default function AdminPage() {
     setIssueError("");
 
     try {
-      await updateIssueStatus(issue.id, status);
+      await updateIssueStatus(issue.id, status, issue);
       setActiveIssueStatusMenuId("");
       setIssues((currentIssues) =>
         currentIssues.map((currentIssue) =>
@@ -1267,11 +1289,37 @@ export default function AdminPage() {
                   disabled={issueSaving}
                   onChange={(event) => setIssueImage(event.target.files?.[0] || null)}
                 />
+                {editingIssueId && currentIssueImage.url && !isIssueImageRemoved && !issueImageFile ? (
+                  <div className="issue-image-upload-preview">
+                    <a
+                      className="issue-image-preview-link"
+                      href={currentIssueImage.url}
+                      rel="noreferrer"
+                      target="_blank"
+                      aria-label="Open current issue image"
+                    >
+                      <img src={currentIssueImage.url} alt="" />
+                    </a>
+                    <button
+                      className="button secondary issue-image-remove-button"
+                      type="button"
+                      disabled={issueSaving}
+                      onClick={removeIssueImage}
+                    >
+                      <CapcomIcon name="delete" size={18} weight="bold" />
+                      Remove Image
+                    </button>
+                  </div>
+                ) : null}
                 <p className="item-meta">
                   {issueImageFile
                     ? issueImageFile.name
+                    : isIssueImageRemoved
+                      ? "Current image will be removed when you save."
                     : editingIssueId
-                      ? "Optional. Choose or paste a new screenshot to replace the current image."
+                      ? currentIssueImage.url
+                        ? "Optional. Choose or paste a new screenshot to replace the current image."
+                        : "Optional. Choose or paste a screenshot."
                       : "Optional. You can also paste a screenshot."}
                 </p>
               </div>

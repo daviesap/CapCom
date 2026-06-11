@@ -9,7 +9,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db } from "../firebase/firestore";
 import { storage } from "../firebase/storage.js";
 
@@ -38,6 +38,13 @@ function normaliseIssueData(issueData) {
     detail: String(issueData.detail || "").trim(),
     status: ISSUE_STATUSES.includes(issueData.status) ? issueData.status : ISSUE_DEFAULTS.status,
     type: ISSUE_TYPES.includes(issueData.type) ? issueData.type : ISSUE_DEFAULTS.type,
+  };
+}
+
+function normaliseExistingIssueImage(issueData = {}) {
+  return {
+    imagePath: typeof issueData.imagePath === "string" ? issueData.imagePath : "",
+    imageUrl: typeof issueData.imageUrl === "string" ? issueData.imageUrl : "",
   };
 }
 
@@ -82,6 +89,11 @@ export async function uploadIssueImage(issueId, file) {
   };
 }
 
+async function deleteIssueImage(imagePath) {
+  if (!imagePath) return;
+  await deleteObject(ref(storage, imagePath));
+}
+
 export async function createIssue(issueData, imageFile, currentUserProfile) {
   const normalisedIssue = normaliseIssueData(issueData);
   if (!normalisedIssue.title) {
@@ -119,17 +131,35 @@ export async function createIssue(issueData, imageFile, currentUserProfile) {
   }
 }
 
-export async function updateIssue(issueId, issueData, imageFile) {
+export async function updateIssue(issueId, issueData, imageFile, options = {}) {
   const normalisedIssue = normaliseIssueData(issueData);
   if (!normalisedIssue.title) {
     throw new Error("Issue title is required.");
   }
 
+  const existingImageData = normaliseExistingIssueImage({
+    imagePath: options.existingImagePath,
+    imageUrl: options.existingImageUrl,
+  });
+  const nextImageData = options.removeImage ? { imagePath: "", imageUrl: "" } : existingImageData;
   const issueRef = doc(db, "issues", issueId);
   await updateDoc(issueRef, {
     ...normalisedIssue,
+    ...nextImageData,
     updatedAt: serverTimestamp(),
   });
+
+  if (options.removeImage && options.existingImagePath) {
+    try {
+      await deleteIssueImage(options.existingImagePath);
+    } catch (imageError) {
+      console.error("Issue image delete failed", imageError);
+      return {
+        id: issueId,
+        imageUploadWarning: imageError?.message || "Issue saved, but the image file could not be deleted.",
+      };
+    }
+  }
 
   if (!imageFile) {
     return { id: issueId, imageUploadWarning: "" };
@@ -151,13 +181,14 @@ export async function updateIssue(issueId, issueData, imageFile) {
   }
 }
 
-export async function updateIssueStatus(issueId, status) {
+export async function updateIssueStatus(issueId, status, issueData = {}) {
   if (!ISSUE_STATUSES.includes(status)) {
     throw new Error("Choose a valid issue status.");
   }
 
   return updateDoc(doc(db, "issues", issueId), {
     status,
+    ...normaliseExistingIssueImage(issueData),
     updatedAt: serverTimestamp(),
   });
 }
