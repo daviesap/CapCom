@@ -104,6 +104,7 @@ import {
   getCachedTruckSizes,
   cacheScheduleDetails,
 } from "../services/localScheduleCache.js";
+import { notify } from "../utils/notify.js";
 
 const noopSetTopbarConfig = () => {};
 
@@ -4365,7 +4366,7 @@ export default function EventEditPage() {
           );
 
           if (hasDetailsToRemove) {
-            setError("Cannot remove schedule dates that contain schedule rows.");
+            notify.error("Cannot remove schedule dates that contain schedule rows.");
             return;
           }
         }

@@ -167,18 +167,26 @@ export default function AdminPage() {
   }, [clients, isSuperAdmin, userProfile?.clientId]);
 
   const issueStatusCounts = useMemo(() => {
-    return issues.reduce((counts, issue) => ({
+    const issuesMatchingTypeFilter = issues.filter((issue) =>
+      issueTypeFilter === "All" || issue.type === issueTypeFilter
+    );
+
+    return issuesMatchingTypeFilter.reduce((counts, issue) => ({
       ...counts,
       [issue.status]: (counts[issue.status] || 0) + 1,
-    }), { All: issues.length });
-  }, [issues]);
+    }), { All: issuesMatchingTypeFilter.length });
+  }, [issues, issueTypeFilter]);
 
   const issueTypeCounts = useMemo(() => {
-    return issues.reduce((counts, issue) => ({
+    const issuesMatchingStatusFilter = issues.filter((issue) =>
+      issueStatusFilter === "All" || issue.status === issueStatusFilter
+    );
+
+    return issuesMatchingStatusFilter.reduce((counts, issue) => ({
       ...counts,
       [issue.type]: (counts[issue.type] || 0) + 1,
-    }), { All: issues.length });
-  }, [issues]);
+    }), { All: issuesMatchingStatusFilter.length });
+  }, [issues, issueStatusFilter]);
 
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => (
