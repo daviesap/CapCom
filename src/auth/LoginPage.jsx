@@ -34,8 +34,8 @@ export default function LoginPage() {
         <img className="login-logo" src="/icon-512x512.png" alt="CapCom" />
 
         <form className="login-card" onSubmit={handleSubmit}>
-          <h1 className="page-title">CapCom</h1>
-          <p className="page-subtitle">Please sign in.</p>
+          <h3 className="page-title">Welcome</h3>
+          <p className="page-subtitle">Please sign in</p>
 
           <div className="login-fields">
             <div className="form-row">
