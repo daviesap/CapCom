@@ -1,5 +1,4 @@
 export default function EventEditorStatusMessages({
-  message,
   error,
   warning,
   isOffline,
@@ -24,7 +23,7 @@ export default function EventEditorStatusMessages({
     filteredViewsLoading ||
     shareArchiveLoading;
 
-  if (!message && !error && !warning && !isOffline && !isLoadingSupportingData) {
+  if (!error && !warning && !isOffline && !isLoadingSupportingData) {
     return null;
   }
 
@@ -32,7 +31,6 @@ export default function EventEditorStatusMessages({
     <div className="event-editor-status-messages" aria-live="polite">
       {error ? <p className="message error-message">{error}</p> : null}
       {warning ? <p className="message warning-message">{warning}</p> : null}
-      {message ? <p className="message success-message">{message}</p> : null}
       {isOffline ? (
         <p className="message offline-message">Offline mode: event editing is disabled.</p>
       ) : null}

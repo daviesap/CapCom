@@ -127,7 +127,6 @@ export default function AdminPage() {
   const [isClientFormOpen, setIsClientFormOpen] = useState(false);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientSaving, setClientSaving] = useState(false);
-  const [clientMessage, setClientMessage] = useState("");
   const [clientError, setClientError] = useState("");
 
   const [userProfiles, setUserProfiles] = useState([]);
@@ -136,7 +135,6 @@ export default function AdminPage() {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSaving, setUserSaving] = useState(false);
-  const [userMessage, setUserMessage] = useState("");
   const [userError, setUserError] = useState("");
   const [events, setEvents] = useState([]);
   const [assignmentUser, setAssignmentUser] = useState(null);
@@ -156,7 +154,6 @@ export default function AdminPage() {
   const [isIssueTypeFilterMenuOpen, setIsIssueTypeFilterMenuOpen] = useState(false);
   const [issueStatusFilter, setIssueStatusFilter] = useState("All");
   const [issueTypeFilter, setIssueTypeFilter] = useState("All");
-  const [issueMessage, setIssueMessage] = useState("");
   const [issueError, setIssueError] = useState("");
   const issueFileInputRef = useRef(null);
 
@@ -289,7 +286,6 @@ export default function AdminPage() {
 
   const openNewClientForm = () => {
     resetClientForm();
-    setClientMessage("");
     setClientError("");
     setIsClientFormOpen(true);
   };
@@ -301,7 +297,6 @@ export default function AdminPage() {
       ...client,
       isActive: client.isActive !== false,
     });
-    setClientMessage("");
     setClientError("");
     setIsClientFormOpen(true);
   };
@@ -309,7 +304,6 @@ export default function AdminPage() {
   const handleClientSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
     setClientSaving(true);
-    setClientMessage("");
     setClientError("");
 
     try {
@@ -324,10 +318,8 @@ export default function AdminPage() {
 
       if (editingClientId) {
         await updateClient(editingClientId, clientData);
-        setClientMessage("Client updated.");
       } else {
         await createClient(clientData, user?.uid);
-        setClientMessage("Client created.");
       }
 
       resetClientForm();
@@ -344,14 +336,12 @@ export default function AdminPage() {
   const toggleClientActive = async (client) => {
     const isCurrentlyActive = client.isActive !== false;
     setClientSaving(true);
-    setClientMessage("");
     setClientError("");
 
     try {
       await updateClient(client.id, {
         isActive: !isCurrentlyActive,
       });
-      setClientMessage(isCurrentlyActive ? "Client deactivated." : "Client reactivated.");
       await loadClients();
     } catch (saveError) {
       console.error(saveError);
@@ -387,7 +377,6 @@ export default function AdminPage() {
 
   const openNewUserForm = () => {
     resetUserForm();
-    setUserMessage("");
     setUserError("");
     setIsUserFormOpen(true);
   };
@@ -402,7 +391,6 @@ export default function AdminPage() {
       clientId: profile.clientId || "",
       isActive: profile.isActive !== false,
     });
-    setUserMessage("");
     setUserError("");
     setIsUserFormOpen(true);
   };
@@ -423,7 +411,6 @@ export default function AdminPage() {
   const handleUserSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
     setUserSaving(true);
-    setUserMessage("");
     setUserError("");
 
     try {
@@ -442,15 +429,12 @@ export default function AdminPage() {
 
       if (editingUserId) {
         await updateUserProfile(editingUserId, userData, userProfile);
-        setUserMessage("User profile updated.");
       } else {
         const createdUser = await createAuthUserProfile(userData);
         try {
           await sendUserPasswordResetEmail(createdUser.email);
-          setUserMessage(`Auth user created and password reset email sent to ${createdUser.email}.`);
         } catch (emailError) {
           console.error(emailError);
-          setUserMessage(`Auth user and profile created for ${createdUser.email}.`);
           setUserError(getSaveErrorMessage(emailError, "Could not send password reset email."));
         }
       }
@@ -469,7 +453,6 @@ export default function AdminPage() {
   const toggleUserActive = async (profile) => {
     const isCurrentlyActive = profile.isActive !== false;
     setUserSaving(true);
-    setUserMessage("");
     setUserError("");
 
     try {
@@ -484,7 +467,6 @@ export default function AdminPage() {
         },
         userProfile
       );
-      setUserMessage(isCurrentlyActive ? "User profile deactivated." : "User profile reactivated.");
       await loadUsers();
     } catch (saveError) {
       console.error(saveError);
@@ -496,12 +478,10 @@ export default function AdminPage() {
 
   const sendPasswordReset = async (profile) => {
     setUserSaving(true);
-    setUserMessage("");
     setUserError("");
 
     try {
       await sendUserPasswordResetEmail(profile.email);
-      setUserMessage(`Password reset email sent to ${profile.email}.`);
     } catch (emailError) {
       console.error(emailError);
       setUserError(getSaveErrorMessage(emailError, "Could not send password reset email."));
@@ -513,7 +493,6 @@ export default function AdminPage() {
   const openAssignmentForm = async (profile) => {
     setAssignmentUser(profile);
     setAssignmentsLoading(true);
-    setUserMessage("");
     setUserError("");
     try {
       const assignments = await getAssignmentsForUser(profile.id, userProfile);
@@ -548,7 +527,6 @@ export default function AdminPage() {
   const saveAssignments = async () => {
     if (!assignmentUser) return;
     setAssignmentsSaving(true);
-    setUserMessage("");
     setUserError("");
     try {
       const existingAssignments = await getAssignmentsForUser(assignmentUser.id, userProfile);
@@ -569,7 +547,6 @@ export default function AdminPage() {
           .map((assignment) => removeEventAssignment(assignment.eventId, assignmentUser.id)),
       ]);
 
-      setUserMessage("Event assignments updated.");
       closeAssignmentForm();
     } catch (assignmentError) {
       console.error(assignmentError);
@@ -597,7 +574,6 @@ export default function AdminPage() {
 
   const openIssueForm = () => {
     resetIssueForm();
-    setIssueMessage("");
     setIssueError("");
     setIsIssueFormOpen(true);
   };
@@ -614,7 +590,6 @@ export default function AdminPage() {
     if (issueFileInputRef.current) {
       issueFileInputRef.current.value = "";
     }
-    setIssueMessage("");
     setIssueError("");
     setActiveIssueStatusMenuId("");
     setIsIssueFormOpen(true);
@@ -652,7 +627,6 @@ export default function AdminPage() {
   const handleIssueSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
     setIssueSaving(true);
-    setIssueMessage("");
     setIssueError("");
 
     try {
@@ -665,8 +639,6 @@ export default function AdminPage() {
       await loadIssues();
       if (savedIssue.imageUploadWarning) {
         setIssueError(savedIssue.imageUploadWarning);
-      } else {
-        setIssueMessage(isEditingIssue ? "Issue updated." : "Issue added.");
       }
     } catch (saveError) {
       console.error(saveError);
@@ -678,7 +650,6 @@ export default function AdminPage() {
 
   const handleIssueStatusChange = async (issue, status) => {
     setIssueUpdatingId(issue.id);
-    setIssueMessage("");
     setIssueError("");
 
     try {
@@ -786,7 +757,6 @@ export default function AdminPage() {
             </div>
 
             {clientError ? <p className="error">{clientError}</p> : null}
-            {clientMessage ? <p className="message success-message">{clientMessage}</p> : null}
 
             {isClientFormOpen ? (
               <Modal
@@ -1112,7 +1082,6 @@ export default function AdminPage() {
             </div>
 
             {issueError ? <p className="error">{issueError}</p> : null}
-            {issueMessage ? <p className="message success-message">{issueMessage}</p> : null}
 
             {issuesLoading ? <p className="message">Loading issues...</p> : null}
             {!issuesLoading && !issueError && issues.length === 0 ? (
@@ -1349,7 +1318,6 @@ export default function AdminPage() {
             </div>
 
             {userError ? <p className="error">{userError}</p> : null}
-            {userMessage ? <p className="message success-message">{userMessage}</p> : null}
 
             {isUserFormOpen ? (
               <Modal

@@ -39,7 +39,6 @@ export default function CompaniesPage() {
   const [editingCompanyId, setEditingCompanyId] = useState("");
   const [savingCompany, setSavingCompany] = useState(false);
   const [deletingCompanyId, setDeletingCompanyId] = useState("");
-  const [companyMessage, setCompanyMessage] = useState("");
   const [companyError, setCompanyError] = useState("");
   const canManageCompanies = isSuperAdmin || isAdmin;
   const isDeletingCurrentCompany = Boolean(editingCompanyId && deletingCompanyId === editingCompanyId);
@@ -113,7 +112,6 @@ export default function CompaniesPage() {
   };
 
   const startAddingCompany = () => {
-    setCompanyMessage("");
     setCompanyError("");
     setIsCompanyFormOpen(true);
     setEditingCompanyId("");
@@ -121,7 +119,6 @@ export default function CompaniesPage() {
   };
 
   const startEditingCompany = (company) => {
-    setCompanyMessage("");
     setCompanyError("");
     setIsCompanyFormOpen(true);
     setEditingCompanyId(company.id);
@@ -133,7 +130,6 @@ export default function CompaniesPage() {
 
   const saveCompany = async (submitEvent) => {
     submitEvent.preventDefault();
-    setCompanyMessage("");
     setCompanyError("");
     if (isOffline) {
       setCompanyError("Editing is disabled while offline.");
@@ -164,14 +160,12 @@ export default function CompaniesPage() {
           companyName,
           address,
         });
-        setCompanyMessage("Company saved.");
       } else {
         await createCompany({
           clientId: activeClientId,
           companyName,
           address,
         });
-        setCompanyMessage("Company created.");
       }
 
       resetCompanyForm();
@@ -194,7 +188,6 @@ export default function CompaniesPage() {
       return;
     }
 
-    setCompanyMessage("");
     setCompanyError("");
     setDeletingCompanyId(companyId);
 
@@ -202,7 +195,6 @@ export default function CompaniesPage() {
       await deleteCompany(companyId);
       if (editingCompanyId === companyId) resetCompanyForm();
       await loadCompanies(activeClientId);
-      setCompanyMessage("Company deleted.");
     } catch (companyError) {
       console.error(companyError);
       setCompanyError("Could not delete company.");
@@ -221,7 +213,6 @@ export default function CompaniesPage() {
         <p className="message offline-message">Offline mode: company records are read-only.</p>
       ) : null}
       {companyError ? <p className="error">{companyError}</p> : null}
-      {companyMessage ? <p className="message">{companyMessage}</p> : null}
 
       {companies.length === 0 ? (
         <p className="item-meta">No companies yet.</p>
@@ -274,7 +265,6 @@ export default function CompaniesPage() {
           onClose={resetCompanyForm}
         >
           {companyError ? <p className="error">{companyError}</p> : null}
-          {companyMessage ? <p className="message">{companyMessage}</p> : null}
           <form className="company-form" onSubmit={saveCompany}>
             <div className="form-grid">
               <div className="form-row">

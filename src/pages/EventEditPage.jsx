@@ -659,7 +659,6 @@ export default function EventEditPage() {
   const [locationDropTargetId, setLocationDropTargetId] = useState("");
   const [contactCompanyDropTargetId, setContactCompanyDropTargetId] = useState("");
   const [companyContactDropTargetId, setCompanyContactDropTargetId] = useState("");
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
   const suppressDetailBlurRef = useRef(false);
@@ -1427,7 +1426,6 @@ export default function EventEditPage() {
     setForm((current) => applyScheduleDateRangeToEventForm(current, scheduleDays));
     setIsEditingEventScheduleRange(false);
     setIsEditingEventDetails(true);
-    setMessage("");
     setError("");
   };
 
@@ -1705,7 +1703,6 @@ export default function EventEditPage() {
       summary: day.summary || "",
       endOfDayTarget: day.endOfDayTarget || "",
     });
-    setMessage("");
     setError("");
   };
 
@@ -1728,7 +1725,6 @@ export default function EventEditPage() {
       return;
     }
     setSavingDayId(day.id);
-    setMessage("");
     setError("");
 
     try {
@@ -1739,7 +1735,6 @@ export default function EventEditPage() {
       updateDayField(day.id, "summary", values.summary || "");
       updateDayField(day.id, "endOfDayTarget", values.endOfDayTarget || "");
       cancelEditingDay();
-      setMessage("Schedule day saved.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not save schedule day.");
@@ -1876,7 +1871,6 @@ export default function EventEditPage() {
     setEditingCompanyContactId("");
     setEditingCompanyContactCompanyId(companyId);
     setCompanyContactForm(emptyCompanyContactForm);
-    setMessage("");
     setError("");
   };
 
@@ -1891,7 +1885,6 @@ export default function EventEditPage() {
       phone: contact.phone || "",
       role: contact.role || "",
     });
-    setMessage("");
     setError("");
   };
 
@@ -1917,7 +1910,6 @@ export default function EventEditPage() {
     }
 
     setSavingCompanyContact(true);
-    setMessage("");
     setError("");
 
     try {
@@ -1937,7 +1929,6 @@ export default function EventEditPage() {
             role,
           });
         }
-        setMessage("Company contact saved.");
       } else {
         eventContactSeedErrorCompanyIdsRef.current.delete(
           editingCompanyContactCompanyId
@@ -1976,7 +1967,6 @@ export default function EventEditPage() {
             startSortOrder: nextSortOrder,
           });
         }
-        setMessage("Company contact created.");
       }
 
       resetCompanyContactForm();
@@ -2000,8 +1990,6 @@ export default function EventEditPage() {
       .find((contact) => contact.id === contactId);
 
     if (!targetContact || isWriteDisabled || !canManageCompanyContacts) return;
-
-    setMessage("");
     setError("");
 
     const nextIsHidden = !targetContact.isHidden;
@@ -2012,7 +2000,6 @@ export default function EventEditPage() {
       await updateEventContact(contactId, {
         isHidden: nextIsHidden,
       });
-      setMessage(nextIsHidden ? "Event contact hidden." : "Event contact unhidden.");
     } catch (contactError) {
       console.error(contactError);
       setEventContactHiddenState(contactId, targetContact.isHidden);
@@ -2224,11 +2211,10 @@ export default function EventEditPage() {
     }
 
     setUpdatingShareOutput(true);
-    setMessage("");
     setError("");
 
     try {
-      const result = await generateHomeForEvent(eventId, { debugPayload: canUseDebugJson });
+      await generateHomeForEvent(eventId, { debugPayload: canUseDebugJson });
       const refreshedEvent = await getEvent(eventId, userProfile);
       if (refreshedEvent) {
         setForm((currentForm) => ({
@@ -2238,22 +2224,6 @@ export default function EventEditPage() {
         }));
       }
       setShareArchive(await getShareArchive(eventId));
-      const payloadPath = result?.debugPayloadPath;
-      const responsePath = result?.debugResponsePath;
-      const debugStatus = result?.debug?.reason || "";
-      if (payloadPath) {
-        setMessage(
-          `${result?.message || "Share output updated."} (payload: ${payloadPath}${
-            responsePath ? `, response: ${responsePath}` : ""
-          }${debugStatus ? `, debug: ${debugStatus}` : ""})`
-        );
-      } else {
-        const debugMessage = result?.debug?.enabled ? " (debug enabled)" : " (debug disabled for this user)";
-        const debugError = result?.debug?.reason && result.debug.reason !== "ok"
-          ? ` (${result.debug.reason})`
-          : "";
-        setMessage(`${result?.message || "Share output updated."}${debugMessage}${debugError}`);
-      }
     } catch (updateError) {
       console.error(updateError);
       const debugPayloadPath = updateError?.customData?.debugPayloadPath;
@@ -2291,7 +2261,6 @@ export default function EventEditPage() {
       showMomContacts: checked,
     };
     setForm(nextEventForm);
-    setMessage("");
     setError("");
 
     try {
@@ -2300,7 +2269,6 @@ export default function EventEditPage() {
         ...current,
         showMomContacts: checked,
       }));
-      setMessage("Home page contact setting saved.");
     } catch (updateError) {
       console.error(updateError);
       setForm(form);
@@ -2323,7 +2291,6 @@ export default function EventEditPage() {
       showMomKeyInfo: checked,
     };
     setForm(nextEventForm);
-    setMessage("");
     setError("");
 
     try {
@@ -2332,7 +2299,6 @@ export default function EventEditPage() {
         ...current,
         showMomKeyInfo: checked,
       }));
-      setMessage("Home page key info setting saved.");
     } catch (updateError) {
       console.error(updateError);
       setForm(form);
@@ -2348,7 +2314,6 @@ export default function EventEditPage() {
       ...emptyFilteredViewForm,
       sortOrder: getNextFilteredViewSortOrder(filteredViews),
     });
-    setMessage("");
     setError("");
   };
 
@@ -2388,7 +2353,6 @@ export default function EventEditPage() {
       group: view.group || "",
       sortOrder: normaliseSortOrderValue(view.sortOrder, FALLBACK_FILTERED_VIEW_SORT_ORDER),
     });
-    setMessage("");
     setError("");
   };
 
@@ -2410,7 +2374,6 @@ export default function EventEditPage() {
     }
 
     setSavingFilteredView(true);
-    setMessage("");
     setError("");
 
     try {
@@ -2421,10 +2384,8 @@ export default function EventEditPage() {
 
       if (editingFilteredViewId) {
         await updateFilteredView(editingFilteredViewId, nextFilteredView);
-        setMessage("Filtered view saved.");
       } else {
         await createFilteredView(nextFilteredView);
-        setMessage("Filtered view created.");
       }
 
       resetFilteredViewForm();
@@ -2454,14 +2415,12 @@ export default function EventEditPage() {
     if (!confirmed) return;
 
     setDeletingFilteredViewId(filteredViewId);
-    setMessage("");
     setError("");
 
     try {
       await deleteFilteredView(filteredViewId);
       if (editingFilteredViewId === filteredViewId) resetFilteredViewForm();
       await loadFilteredViews();
-      setMessage("Filtered view deleted.");
     } catch (filteredViewError) {
       console.error(filteredViewError);
       setError("Could not delete filtered view.");
@@ -2495,7 +2454,6 @@ export default function EventEditPage() {
     }));
     setCompanyContactDropTargetId("");
     setReorderingCompanyContactId(companyId);
-    setMessage("");
     setError("");
 
     try {
@@ -2528,7 +2486,6 @@ export default function EventEditPage() {
     }));
     setContactCompanyDropTargetId("");
     setSavingContactCompanyOrder(true);
-    setMessage("");
     setError("");
 
     try {
@@ -2731,7 +2688,6 @@ export default function EventEditPage() {
     setEditingTagId("");
     setTagForm(emptyTagForm);
     setError("");
-    setMessage("");
   };
 
   const startEditingTag = (tag) => {
@@ -2742,7 +2698,6 @@ export default function EventEditPage() {
       colour: normaliseHexColour(tag.colour) || emptyTagForm.colour,
     });
     setError("");
-    setMessage("");
   };
 
   const saveTag = async (submitEvent) => {
@@ -2753,7 +2708,6 @@ export default function EventEditPage() {
     }
     setSavingTag(true);
     setError("");
-    setMessage("");
 
     try {
       const name = tagForm.name.trim();
@@ -2765,10 +2719,8 @@ export default function EventEditPage() {
 
       if (editingTagId) {
         await updateTag(editingTagId, { name, colour });
-        setMessage("Tag saved.");
       } else {
         await createTag({ eventId, name, colour });
-        setMessage("Tag created.");
       }
       resetTagForm();
       await loadTags();
@@ -2787,7 +2739,6 @@ export default function EventEditPage() {
     }
     setDeletingTagId(tagId);
     setError("");
-    setMessage("");
 
     try {
       const targetTag = tags.find((tag) => tag.id === tagId);
@@ -2800,7 +2751,6 @@ export default function EventEditPage() {
       await deleteTag(tagId);
       if (editingTagId === tagId) resetTagForm();
       await loadTags();
-      setMessage("Tag deleted.");
     } catch (tagError) {
       console.error(tagError);
       setError("Could not delete tag.");
@@ -2824,7 +2774,6 @@ export default function EventEditPage() {
     setEditingTruckSizeId("");
     setTruckSizeForm(emptyTruckSizeForm);
     setError("");
-    setMessage("");
   };
 
   const startEditingTruckSize = (truckSize) => {
@@ -2834,7 +2783,6 @@ export default function EventEditPage() {
       size: truckSize.size || "",
     });
     setError("");
-    setMessage("");
   };
 
   const saveTruckSize = async (submitEvent) => {
@@ -2846,7 +2794,6 @@ export default function EventEditPage() {
 
     setSavingTruckSize(true);
     setError("");
-    setMessage("");
 
     try {
       const size = truckSizeForm.size.trim();
@@ -2857,10 +2804,8 @@ export default function EventEditPage() {
 
       if (editingTruckSizeId) {
         await updateTruckSize(editingTruckSizeId, { size });
-        setMessage("Truck size saved.");
       } else {
         await createTruckSize({ eventId, size });
-        setMessage("Truck size created.");
       }
 
       resetTruckSizeForm();
@@ -2880,13 +2825,11 @@ export default function EventEditPage() {
     }
     setDeletingTruckSizeId(truckSizeId);
     setError("");
-    setMessage("");
 
     try {
       await deleteTruckSize(truckSizeId);
       if (editingTruckSizeId === truckSizeId) resetTruckSizeForm();
       await loadTruckSizes();
-      setMessage("Truck size deleted.");
     } catch (truckSizeError) {
       console.error(truckSizeError);
       setError("Could not delete truck size.");
@@ -2910,7 +2853,6 @@ export default function EventEditPage() {
     setTruckForm(emptyTruckForm);
     setTruckFormMode("create");
     setError("");
-    setMessage("");
   };
 
   const startEditingTruck = (truck) => {
@@ -2925,7 +2867,6 @@ export default function EventEditPage() {
       contents: truck.contents || "",
     });
     setError("");
-    setMessage("");
   };
 
   const buildTruckPayload = () => {
@@ -2956,7 +2897,6 @@ export default function EventEditPage() {
 
     setSavingTruck(true);
     setError("");
-    setMessage("");
 
     try {
       const truckPayload = buildTruckPayload();
@@ -2971,10 +2911,8 @@ export default function EventEditPage() {
 
       if (editingTruckId) {
         await updateTruck(editingTruckId, truckPayload);
-        setMessage("Truck saved.");
       } else {
         await createTruck(truckPayload);
-        setMessage("Truck created.");
       }
 
       resetTruckForm();
@@ -2994,13 +2932,11 @@ export default function EventEditPage() {
     }
     setDeletingTruckId(truckId);
     setError("");
-    setMessage("");
 
     try {
       await deleteTruck(truckId);
       if (editingTruckId === truckId) resetTruckForm();
       await loadTrucks();
-      setMessage("Truck deleted.");
     } catch (truckError) {
       console.error(truckError);
       setError("Could not delete truck.");
@@ -3024,7 +2960,6 @@ export default function EventEditPage() {
     setEditingLocationId("");
     setLocationForm(emptyLocationForm);
     setError("");
-    setMessage("");
   };
 
   const startEditingLocation = (location) => {
@@ -3035,7 +2970,6 @@ export default function EventEditPage() {
       parentLocationId: location.parentLocationId || "",
     });
     setError("");
-    setMessage("");
   };
 
   const startAddingSubLocation = (location) => {
@@ -3047,7 +2981,6 @@ export default function EventEditPage() {
       parentLocationId: location.id,
     });
     setError("");
-    setMessage("");
   };
 
   const saveLocation = async (submitEvent) => {
@@ -3058,7 +2991,6 @@ export default function EventEditPage() {
     }
     setSavingLocation(true);
     setError("");
-    setMessage("");
 
     try {
       const name = locationForm.name.trim();
@@ -3081,10 +3013,8 @@ export default function EventEditPage() {
 
       if (editingLocationId) {
         await updateLocation(editingLocationId, { name, parentLocationId });
-        setMessage("Location saved.");
       } else {
         await createLocation({ eventId, name, parentLocationId });
-        setMessage("Location created.");
       }
       resetLocationForm();
       await loadLocations();
@@ -3121,7 +3051,6 @@ export default function EventEditPage() {
     setMovingLocationId(locationId);
     setLocationDropTargetId("");
     setError("");
-    setMessage("");
     setLocations((current) =>
       current.map((currentLocation) => {
         if (currentLocation.id === locationId) return { ...currentLocation, parentLocationId };
@@ -3150,13 +3079,6 @@ export default function EventEditPage() {
       if (editingLocationId === locationId) {
         setLocationForm((current) => ({ ...current, parentLocationId }));
       }
-      setMessage(
-        parentLocationId && childLocations.length > 0
-          ? "Location moved. Its sub-locations were promoted to main locations."
-          : parentLocationId
-            ? "Location moved."
-            : "Location moved to main locations."
-      );
     } catch (locationError) {
       console.error(locationError);
       setError("Could not move location.");
@@ -3178,17 +3100,11 @@ export default function EventEditPage() {
 
     setDeletingLocationId(locationId);
     setError("");
-    setMessage("");
 
     try {
       await Promise.all(locationIdsToDelete.map((nextLocationId) => deleteLocation(nextLocationId)));
       if (locationIdsToDelete.includes(editingLocationId)) resetLocationForm();
       await loadLocations();
-      setMessage(
-        childLocationIds.length > 0
-          ? "Location and sub-locations deleted."
-          : "Location deleted."
-      );
     } catch (locationError) {
       console.error(locationError);
       setError("Could not delete location.");
@@ -3220,7 +3136,6 @@ export default function EventEditPage() {
       setNotesDraft(detail.notes || "");
       return detail.id;
     });
-    setMessage("");
     setError("");
   };
 
@@ -3251,7 +3166,6 @@ export default function EventEditPage() {
         },
       }));
       closeNotesEditor();
-      setMessage("Notes saved.");
     } catch (notesError) {
       console.error(notesError);
       setError("Could not save notes.");
@@ -3268,7 +3182,6 @@ export default function EventEditPage() {
     if (isWriteDisabled) return;
     setEditingDetailCell({ dayId, detailId, field });
     setOpenActionMenuId("");
-    setMessage("");
     setError("");
   };
 
@@ -3362,7 +3275,6 @@ export default function EventEditPage() {
       notes: detail.notes || "",
     });
     setOpenActionMenuId("");
-    setMessage("");
     setError("");
   };
 
@@ -3382,7 +3294,6 @@ export default function EventEditPage() {
       notes: detail.notes || "",
     });
     setOpenActionMenuId("");
-    setMessage("");
     setError("");
   };
 
@@ -3457,7 +3368,6 @@ export default function EventEditPage() {
     }
 
     setSavingDetailId(currentDetail.id);
-    setMessage("");
     setError("");
 
     try {
@@ -3509,7 +3419,6 @@ export default function EventEditPage() {
         },
       }));
       cancelEditingDetail();
-      setMessage("Schedule row saved.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not save schedule row.");
@@ -3536,7 +3445,6 @@ export default function EventEditPage() {
     }
 
     setSavingDetailId(currentDetail.id);
-    setMessage("");
     setError("");
 
     try {
@@ -3562,7 +3470,6 @@ export default function EventEditPage() {
         },
       }));
       cancelEditingDetail();
-      setMessage("Time saved.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not save time.");
@@ -3880,7 +3787,6 @@ export default function EventEditPage() {
         locationId: defaults.locationId,
         companyIds: defaults.companyIds,
       });
-      setMessage("");
       setError("");
       return;
     }
@@ -3975,7 +3881,6 @@ export default function EventEditPage() {
     }
 
     setSavingDraftDayId(addingDetailDayId);
-    setMessage("");
     setError("");
 
     try {
@@ -3994,7 +3899,6 @@ export default function EventEditPage() {
       const detailRef = await createScheduleDetail(detailData);
       addCreatedDetailToDay(addingDetailDayId, detailRef, detailData);
       cancelEditingDetail();
-      setMessage("Schedule row added.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not add schedule detail.");
@@ -4060,7 +3964,6 @@ export default function EventEditPage() {
         destinationValue: getTruckDestinationValue(defaultTruckDestination),
         ...defaultTruckDestination,
       });
-      setMessage("");
       setError("");
       return;
     }
@@ -4162,7 +4065,6 @@ export default function EventEditPage() {
     }
 
     setSavingDraftDayId(addingTruckDetailTruck.id);
-    setMessage("");
     setError("");
 
     try {
@@ -4186,7 +4088,6 @@ export default function EventEditPage() {
       const detailRef = await createScheduleDetail(detailData);
       addCreatedDetailToDay(detailEditForm.scheduleDayId, detailRef, detailData);
       cancelEditingDetail();
-      setMessage("Truck row added.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not add truck detail.");
@@ -4425,7 +4326,6 @@ export default function EventEditPage() {
       return;
     }
     setSavingEvent(true);
-    setMessage("");
     setError("");
 
     try {
@@ -4486,7 +4386,6 @@ export default function EventEditPage() {
       setIsEditingEventDetails(false);
       applyScheduleDays(days);
       await loadCompanies(eventFormToSave.clientId);
-      setMessage("Event saved.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not save event or sync schedule days.");
@@ -4500,7 +4399,6 @@ export default function EventEditPage() {
       scheduleStartDate: form.scheduleStartDate || form.startDate || "",
       scheduleEndDate: form.scheduleEndDate || form.endDate || "",
     });
-    setMessage("");
     setError("");
     setIsEditingScheduleDateRange(true);
   };
@@ -4538,7 +4436,6 @@ export default function EventEditPage() {
     }
 
     setSavingScheduleDateRange(true);
-    setMessage("");
     setError("");
 
     try {
@@ -4559,7 +4456,6 @@ export default function EventEditPage() {
       setSavedEventForm(nextEventForm);
       applyScheduleDays(days);
       setIsEditingScheduleDateRange(false);
-      setMessage("Schedule date range updated.");
     } catch (saveError) {
       console.error(saveError);
       setError("Could not update schedule date range.");
@@ -4575,17 +4471,15 @@ export default function EventEditPage() {
 
     if (!canImportSchedule) {
       setError("Import is not available while schedule data is still loading.");
-      setMessage("");
       return;
     }
 
     setImportingSchedule(true);
-    setMessage("");
     setError("");
 
     try {
       const rows = await parseScheduleImportFile(file);
-      const result = await importScheduleRows({ eventId, rows });
+      await importScheduleRows({ eventId, rows });
       const days = await getScheduleDays(eventId);
       setScheduleDays(days);
       setForm((current) => applyScheduleDateRangeToEventForm(current, days));
@@ -4593,9 +4487,6 @@ export default function EventEditPage() {
         loadScheduleDetails(days),
         loadTags(),
       ]);
-      setMessage(
-        `Imported ${result.detailCount} schedule row${result.detailCount === 1 ? "" : "s"} across ${result.dayCount} day${result.dayCount === 1 ? "" : "s"} with tag ${result.tagName}.`
-      );
     } catch (importError) {
       console.error("Could not import schedule.", importError);
       setError(importError instanceof Error ? importError.message : "Could not import schedule.");
@@ -4607,7 +4498,6 @@ export default function EventEditPage() {
   const clearScheduleDetailsForTesting = async () => {
     if (!isSuperAdmin) {
       setError("Only SuperAdmins can clear schedule detail rows.");
-      setMessage("");
       return;
     }
 
@@ -4619,20 +4509,16 @@ export default function EventEditPage() {
     if (!confirmed) return;
 
     setClearingScheduleDetails(true);
-    setMessage("");
     setError("");
 
     try {
-      const deletedCount = await deleteScheduleDetailsForEvent(
+      await deleteScheduleDetailsForEvent(
         eventId,
         scheduleDays.map((day) => day.id)
       );
       const days = await getScheduleDays(eventId);
       setScheduleDays(days);
       await loadScheduleDetails(days);
-      setMessage(
-        `Cleared ${deletedCount} schedule detail row${deletedCount === 1 ? "" : "s"}.`
-      );
     } catch (clearError) {
       console.error("Could not clear schedule detail rows.", clearError);
       setError(
@@ -4781,7 +4667,6 @@ export default function EventEditPage() {
         onRemoveImage={removeEventImage}
         onStartEditingScheduleRange={() => setIsEditingEventScheduleRange(true)}
         onImportSchedule={() => {
-          setMessage("");
           setError("");
           scheduleImportInputRef.current?.click();
         }}
@@ -4789,7 +4674,6 @@ export default function EventEditPage() {
       />
 
       <EventEditorStatusMessages
-        message={message}
         error={error}
         warning={warning}
         isOffline={isWriteDisabled}
