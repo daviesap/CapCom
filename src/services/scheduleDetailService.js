@@ -289,6 +289,48 @@ export async function deleteScheduleDetail(detailId) {
   }
 }
 
+export async function deleteScheduleDetailsForEvent(eventId, scheduleDayIds = []) {
+  assertOnline();
+  if (!eventId) throw new Error("Event ID is required.");
+
+  const detailDocsById = new Map();
+  const eventScopedQuery = query(scheduleDetailsRef, where("eventId", "==", eventId));
+  const eventScopedSnapshot = await getDocs(eventScopedQuery);
+  eventScopedSnapshot.docs.forEach((detailDoc) => {
+    detailDocsById.set(detailDoc.id, detailDoc);
+  });
+
+  const dayIds = [...new Set(scheduleDayIds.filter(Boolean))];
+  for (let index = 0; index < dayIds.length; index += FIRESTORE_IN_QUERY_LIMIT) {
+    const dayIdChunk = dayIds.slice(index, index + FIRESTORE_IN_QUERY_LIMIT);
+    const dayScopedQuery = query(
+      scheduleDetailsRef,
+      where("scheduleDayId", "in", dayIdChunk)
+    );
+    const dayScopedSnapshot = await getDocs(dayScopedQuery);
+    dayScopedSnapshot.docs.forEach((detailDoc) => {
+      detailDocsById.set(detailDoc.id, detailDoc);
+    });
+  }
+
+  const detailDocs = [...detailDocsById.values()];
+  if (detailDocs.length === 0) return 0;
+
+  try {
+    for (let index = 0; index < detailDocs.length; index += FIRESTORE_IN_QUERY_LIMIT) {
+      const batch = writeBatch(db);
+      detailDocs.slice(index, index + FIRESTORE_IN_QUERY_LIMIT).forEach((detailDoc) => {
+        batch.delete(detailDoc.ref);
+      });
+      await batch.commit();
+    }
+    return detailDocs.length;
+  } catch (error) {
+    logWriteError("delete schedule details for event", error, { eventId });
+    throw error;
+  }
+}
+
 export async function updateScheduleDetailOrder(details) {
   assertOnline();
   if (details.length === 0) return null;

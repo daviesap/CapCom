@@ -381,6 +381,13 @@ summary:focus-visible {
   border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-surface));
 }
 
+.event-topbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-3);
+}
+
 .mobile-bottom-nav {
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
@@ -3379,6 +3386,25 @@ textarea {
   margin: 0 0 var(--space-6);
   padding: var(--space-4) var(--space-5);
   text-align: left;
+}
+
+.error-message {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 34%, var(--color-surface));
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  display: flex;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+}
+
+.event-editor-status-messages {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 .error {

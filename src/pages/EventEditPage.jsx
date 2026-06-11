@@ -32,10 +32,15 @@ import {
 import {
   createScheduleDetail,
   deleteScheduleDetail,
+  deleteScheduleDetailsForEvent,
   getScheduleDetailsForEvent,
   updateScheduleDetail,
   updateScheduleDetailOrder,
 } from "../services/scheduleDetailService.js";
+import {
+  importScheduleRows,
+  parseScheduleImportFile,
+} from "../services/scheduleImportService.js";
 import {
   createTag,
   deleteTag,
@@ -132,6 +137,30 @@ function validateEventForm(eventForm, userProfile) {
     return "Schedule start date must be before or equal to schedule end date.";
   }
   return "";
+}
+
+function getScheduleDateRangeFromDays(scheduleDays) {
+  const dates = scheduleDays
+    .map((day) => day.date)
+    .filter(Boolean)
+    .sort((dateA, dateB) => String(dateA).localeCompare(String(dateB)));
+
+  if (dates.length === 0) return null;
+
+  return {
+    scheduleStartDate: dates[0],
+    scheduleEndDate: dates[dates.length - 1],
+  };
+}
+
+function applyScheduleDateRangeToEventForm(eventForm, scheduleDays) {
+  const scheduleDateRange = getScheduleDateRangeFromDays(scheduleDays);
+  if (!scheduleDateRange) return eventForm;
+
+  return {
+    ...eventForm,
+    ...scheduleDateRange,
+  };
 }
 
 const eventEditTabs = [
@@ -581,6 +610,8 @@ export default function EventEditPage() {
   const [companyContactsLoading, setCompanyContactsLoading] = useState(false);
   const [eventContactsLoading, setEventContactsLoading] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const [importingSchedule, setImportingSchedule] = useState(false);
+  const [clearingScheduleDetails, setClearingScheduleDetails] = useState(false);
   const [savingDayId, setSavingDayId] = useState("");
   const [savingDetailId, setSavingDetailId] = useState("");
   const [savingTruckSize, setSavingTruckSize] = useState(false);
@@ -620,7 +651,7 @@ export default function EventEditPage() {
   const [locationDropTargetId, setLocationDropTargetId] = useState("");
   const [contactCompanyDropTargetId, setContactCompanyDropTargetId] = useState("");
   const [companyContactDropTargetId, setCompanyContactDropTargetId] = useState("");
-  const [, setMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
   const suppressDetailBlurRef = useRef(false);
@@ -632,6 +663,7 @@ export default function EventEditPage() {
   const draggedContactCompanyIdRef = useRef("");
   const draggedCompanyContactIdRef = useRef("");
   const draggedKeyInfoIdRef = useRef("");
+  const scheduleImportInputRef = useRef(null);
   const canManageCompanyContacts = !isEventReadOnly && (isSuperAdmin || isAdmin);
   const canManageFilteredViews = !isEventReadOnly && (isSuperAdmin || isAdmin || isUser);
   const canUpdateShareOutput = !isEventReadOnly && (isSuperAdmin || isAdmin || isUser);
@@ -889,6 +921,19 @@ export default function EventEditPage() {
   const scheduleDetails = useMemo(() => {
     return Object.values(detailsByDayId).flat();
   }, [detailsByDayId]);
+  const showImportSchedule =
+    !loading &&
+    !detailsLoading &&
+    !isWriteDisabled &&
+    !isEventReadOnly &&
+    scheduleDetails.length === 0;
+  const canImportSchedule = showImportSchedule && !importingSchedule;
+  const showClearScheduleDetails = isSuperAdmin && !loading && !isOffline;
+  const canClearScheduleDetails =
+    showClearScheduleDetails &&
+    !detailsLoading &&
+    !clearingScheduleDetails &&
+    scheduleDetails.length > 0;
 
   const shareLastUpdatedText = useMemo(
     () => formatRelativeDate(form.apiResponse?.timestamp),
@@ -1359,6 +1404,13 @@ export default function EventEditPage() {
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const startEditingEventDetails = () => {
+    setForm((current) => applyScheduleDateRangeToEventForm(current, scheduleDays));
+    setIsEditingEventDetails(true);
+    setMessage("");
+    setError("");
   };
 
   const handleEventImageChange = (event) => {
@@ -4358,7 +4410,8 @@ export default function EventEditPage() {
     setError("");
 
     try {
-      const validationMessage = validateEventForm(form, userProfile);
+      const nextEventForm = applyScheduleDateRangeToEventForm(form, scheduleDays);
+      const validationMessage = validateEventForm(nextEventForm, userProfile);
       if (validationMessage) {
         setError(validationMessage);
         return;
@@ -4366,27 +4419,27 @@ export default function EventEditPage() {
 
       const imageUrl = eventImageFile
         ? await uploadEventImage(eventId, eventImageFile)
-        : form.imageUrl;
-      const nextEventForm = {
-        ...form,
+        : nextEventForm.imageUrl;
+      const eventFormToSave = {
+        ...nextEventForm,
         imageUrl,
       };
       await updateEvent(
         eventId,
-        nextEventForm,
+        eventFormToSave,
         userProfile
       );
       const days = await syncScheduleDaysToRange(
         eventId,
-        form.scheduleStartDate,
-        form.scheduleEndDate
+        eventFormToSave.scheduleStartDate,
+        eventFormToSave.scheduleEndDate
       );
-      setForm(nextEventForm);
-      setSavedEventForm(nextEventForm);
+      setForm(eventFormToSave);
+      setSavedEventForm(eventFormToSave);
       setEventImageFile(null);
       setIsEditingEventDetails(false);
       applyScheduleDays(days);
-      await loadCompanies(nextEventForm.clientId);
+      await loadCompanies(eventFormToSave.clientId);
       setMessage("Event saved.");
     } catch (saveError) {
       console.error(saveError);
@@ -4469,6 +4522,79 @@ export default function EventEditPage() {
     }
   };
 
+  const handleScheduleImportFileChange = async (changeEvent) => {
+    const file = changeEvent.target.files?.[0];
+    changeEvent.target.value = "";
+    if (!file) return;
+
+    if (!canImportSchedule) {
+      setError("Import is only available while the schedule has no detail rows.");
+      setMessage("");
+      return;
+    }
+
+    setImportingSchedule(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const rows = await parseScheduleImportFile(file);
+      const result = await importScheduleRows({ eventId, rows });
+      const days = await getScheduleDays(eventId);
+      setScheduleDays(days);
+      await loadScheduleDetails(days);
+      setMessage(
+        `Imported ${result.detailCount} schedule row${result.detailCount === 1 ? "" : "s"} across ${result.dayCount} day${result.dayCount === 1 ? "" : "s"}.`
+      );
+    } catch (importError) {
+      console.error("Could not import schedule.", importError);
+      setError(importError instanceof Error ? importError.message : "Could not import schedule.");
+    } finally {
+      setImportingSchedule(false);
+    }
+  };
+
+  const clearScheduleDetailsForTesting = async () => {
+    if (!isSuperAdmin) {
+      setError("Only SuperAdmins can clear schedule detail rows.");
+      setMessage("");
+      return;
+    }
+
+    if (!canClearScheduleDetails) return;
+
+    const confirmed = window.confirm(
+      "Clear all schedule detail rows for this event? This is for testing only and cannot be undone."
+    );
+    if (!confirmed) return;
+
+    setClearingScheduleDetails(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const deletedCount = await deleteScheduleDetailsForEvent(
+        eventId,
+        scheduleDays.map((day) => day.id)
+      );
+      const days = await getScheduleDays(eventId);
+      setScheduleDays(days);
+      await loadScheduleDetails(days);
+      setMessage(
+        `Cleared ${deletedCount} schedule detail row${deletedCount === 1 ? "" : "s"}.`
+      );
+    } catch (clearError) {
+      console.error("Could not clear schedule detail rows.", clearError);
+      setError(
+        clearError instanceof Error
+          ? clearError.message
+          : "Could not clear schedule detail rows."
+      );
+    } finally {
+      setClearingScheduleDetails(false);
+    }
+  };
+
   const eventHeaderImageUrl = eventImagePreviewUrl || form.imageUrl;
   const eventDateRangeLabel = formatEventDateRange(form.startDate, form.endDate);
   const eventTopbarDate = eventDateRangeLabel || "No event dates";
@@ -4494,21 +4620,53 @@ export default function EventEditPage() {
             <span className="event-topbar-separator">-</span>
             <p className="event-topbar-meta">{eventTopbarDate}</p>
           </div>
-          {!isEditingEventDetails && !isEventReadOnly ? (
-            <button
-              className="button event-topbar-edit-button"
-              type="button"
-              aria-label="Edit event"
-              disabled={isOffline}
-              onClick={() => {
-                setIsEditingEventDetails(true);
-                setMessage("");
-                setError("");
-              }}
-            >
-              <CapcomIcon name="edit" size={18} weight="bold" />
-              <span className="button-label">Edit</span>
-            </button>
+          {showImportSchedule || showClearScheduleDetails || (!isEditingEventDetails && !isEventReadOnly) ? (
+            <div className="event-topbar-actions">
+              {showImportSchedule ? (
+                <button
+                  className="button event-topbar-edit-button"
+                  type="button"
+                  aria-label="Import schedule"
+                  disabled={!canImportSchedule}
+                  onClick={() => {
+                    setMessage("");
+                    setError("");
+                    scheduleImportInputRef.current?.click();
+                  }}
+                >
+                  <CapcomIcon name="import" size={18} weight="bold" />
+                  <span className="button-label">
+                    {importingSchedule ? "Importing..." : "Import"}
+                  </span>
+                </button>
+              ) : null}
+              {showClearScheduleDetails ? (
+                <button
+                  className="button event-topbar-edit-button"
+                  type="button"
+                  aria-label="Clear schedule detail rows for testing"
+                  disabled={!canClearScheduleDetails}
+                  onClick={clearScheduleDetailsForTesting}
+                >
+                  <CapcomIcon name="delete" size={18} weight="bold" />
+                  <span className="button-label">
+                    {clearingScheduleDetails ? "Clearing..." : "Clear rows"}
+                  </span>
+                </button>
+              ) : null}
+              {!isEditingEventDetails && !isEventReadOnly ? (
+                <button
+                  className="button event-topbar-edit-button"
+                  type="button"
+                  aria-label="Edit event"
+                  disabled={isOffline}
+                  onClick={startEditingEventDetails}
+                >
+                  <CapcomIcon name="edit" size={18} weight="bold" />
+                  <span className="button-label">Edit</span>
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ),
@@ -4518,10 +4676,16 @@ export default function EventEditPage() {
     eventTopbarDate,
     form.venue,
     form.name,
+    canImportSchedule,
+    canClearScheduleDetails,
+    clearingScheduleDetails,
+    importingSchedule,
     isEditingEventDetails,
     isEventReadOnly,
     isOffline,
     loading,
+    showClearScheduleDetails,
+    showImportSchedule,
     setTopbarConfig,
   ]);
 
@@ -4556,6 +4720,15 @@ export default function EventEditPage() {
 
   return (
     <main className="page">
+      <input
+        ref={scheduleImportInputRef}
+        className="sr-only"
+        type="file"
+        accept=".csv,.xlsx"
+        tabIndex={-1}
+        onChange={handleScheduleImportFileChange}
+      />
+
       <EventEditorHeader
         eventId={eventId}
         form={form}
@@ -4565,11 +4738,7 @@ export default function EventEditPage() {
         isOffline={isOffline}
         canEditEvent={!isEventReadOnly}
         savingEvent={savingEvent}
-        onStartEditing={() => {
-          setIsEditingEventDetails(true);
-          setMessage("");
-          setError("");
-        }}
+        onStartEditing={startEditingEventDetails}
         onSubmit={handleEventSave}
         onCancel={cancelEditingEventDetails}
         onUpdateField={updateField}
@@ -4579,6 +4748,7 @@ export default function EventEditPage() {
       />
 
       <EventEditorStatusMessages
+        message={message}
         error={error}
         warning={warning}
         isOffline={isWriteDisabled}
