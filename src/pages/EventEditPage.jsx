@@ -4621,26 +4621,8 @@ export default function EventEditPage() {
             <span className="event-topbar-separator">-</span>
             <p className="event-topbar-meta">{eventTopbarDate}</p>
           </div>
-          {showImportSchedule || showClearScheduleDetails || (!isEditingEventDetails && !isEventReadOnly) ? (
+          {showClearScheduleDetails || (!isEditingEventDetails && !isEventReadOnly) ? (
             <div className="event-topbar-actions">
-              {showImportSchedule ? (
-                <button
-                  className="button event-topbar-edit-button"
-                  type="button"
-                  aria-label="Import schedule"
-                  disabled={!canImportSchedule}
-                  onClick={() => {
-                    setMessage("");
-                    setError("");
-                    scheduleImportInputRef.current?.click();
-                  }}
-                >
-                  <CapcomIcon name="import" size={18} weight="bold" />
-                  <span className="button-label">
-                    {importingSchedule ? "Importing..." : "Import"}
-                  </span>
-                </button>
-              ) : null}
               {showClearScheduleDetails ? (
                 <button
                   className="button event-topbar-edit-button"
@@ -4680,13 +4662,11 @@ export default function EventEditPage() {
     canImportSchedule,
     canClearScheduleDetails,
     clearingScheduleDetails,
-    importingSchedule,
     isEditingEventDetails,
     isEventReadOnly,
     isOffline,
     loading,
     showClearScheduleDetails,
-    showImportSchedule,
     setTopbarConfig,
   ]);
 
@@ -4739,12 +4719,19 @@ export default function EventEditPage() {
         isOffline={isOffline}
         canEditEvent={!isEventReadOnly}
         savingEvent={savingEvent}
+        importingSchedule={importingSchedule}
+        canImportSchedule={canImportSchedule}
         onStartEditing={startEditingEventDetails}
         onSubmit={handleEventSave}
         onCancel={cancelEditingEventDetails}
         onUpdateField={updateField}
         onImageChange={handleEventImageChange}
         onRemoveImage={removeEventImage}
+        onImportSchedule={() => {
+          setMessage("");
+          setError("");
+          scheduleImportInputRef.current?.click();
+        }}
         showSummary={false}
       />
 

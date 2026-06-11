@@ -10,12 +10,15 @@ export default function EventEditorHeader({
   isOffline,
   canEditEvent,
   savingEvent,
+  importingSchedule = false,
+  canImportSchedule = false,
   onStartEditing,
   onSubmit,
   onCancel,
   onUpdateField,
   onImageChange,
   onRemoveImage,
+  onImportSchedule,
   showSummary = true,
 }) {
   return (
@@ -172,6 +175,19 @@ export default function EventEditorHeader({
             </div>
           </div>
           <div className="actions">
+            {onImportSchedule ? (
+              <button
+                className="button secondary"
+                type="button"
+                disabled={savingEvent || importingSchedule || isOffline || !canImportSchedule}
+                onClick={onImportSchedule}
+              >
+                <CapcomIcon name="import" size={18} weight="bold" />
+                <span className="button-label">
+                  {importingSchedule ? "Importing..." : "Import"}
+                </span>
+              </button>
+            ) : null}
             <button className="button" type="submit" disabled={savingEvent || isOffline}>
               {savingEvent ? "Saving..." : "Save event"}
             </button>
