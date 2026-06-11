@@ -923,11 +923,9 @@ export default function EventEditPage() {
   }, [detailsByDayId]);
   const showImportSchedule =
     !loading &&
-    !detailsLoading &&
     !isWriteDisabled &&
-    !isEventReadOnly &&
-    scheduleDetails.length === 0;
-  const canImportSchedule = showImportSchedule && !importingSchedule;
+    !isEventReadOnly;
+  const canImportSchedule = showImportSchedule && !importingSchedule && !detailsLoading;
   const showClearScheduleDetails = isSuperAdmin && !loading && !isOffline;
   const canClearScheduleDetails =
     showClearScheduleDetails &&
@@ -4528,7 +4526,7 @@ export default function EventEditPage() {
     if (!file) return;
 
     if (!canImportSchedule) {
-      setError("Import is only available while the schedule has no detail rows.");
+      setError("Import is not available while schedule data is still loading.");
       setMessage("");
       return;
     }
@@ -4542,9 +4540,12 @@ export default function EventEditPage() {
       const result = await importScheduleRows({ eventId, rows });
       const days = await getScheduleDays(eventId);
       setScheduleDays(days);
-      await loadScheduleDetails(days);
+      await Promise.all([
+        loadScheduleDetails(days),
+        loadTags(),
+      ]);
       setMessage(
-        `Imported ${result.detailCount} schedule row${result.detailCount === 1 ? "" : "s"} across ${result.dayCount} day${result.dayCount === 1 ? "" : "s"}.`
+        `Imported ${result.detailCount} schedule row${result.detailCount === 1 ? "" : "s"} across ${result.dayCount} day${result.dayCount === 1 ? "" : "s"} with tag ${result.tagName}.`
       );
     } catch (importError) {
       console.error("Could not import schedule.", importError);

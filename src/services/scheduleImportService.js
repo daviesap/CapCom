@@ -17,6 +17,8 @@ const FIRESTORE_IN_QUERY_LIMIT = 30;
 
 const scheduleDaysRef = collection(db, "scheduleDays");
 const scheduleDetailsRef = collection(db, "scheduleDetails");
+const tagsRef = collection(db, "tags");
+const IMPORT_TAG_COLOUR = "#F39200";
 
 function normaliseHeader(value) {
   return String(value || "").trim().toLowerCase();
@@ -247,6 +249,31 @@ async function getEventScheduleState(eventId) {
   };
 }
 
+async function getNextImportTag(eventId) {
+  const tagsSnapshot = await getDocs(query(tagsRef, where("eventId", "==", eventId)));
+  const highestImportNumber = tagsSnapshot.docs.reduce((highestNumber, tagDoc) => {
+    const importMatch = String(tagDoc.data()?.name || "").trim().match(/^Import #(\d+)$/);
+    if (!importMatch) return highestNumber;
+
+    const importNumber = Number(importMatch[1]);
+    return Number.isFinite(importNumber) ? Math.max(highestNumber, importNumber) : highestNumber;
+  }, 0);
+
+  const tagRef = doc(tagsRef);
+  const name = `Import #${highestImportNumber + 1}`;
+
+  return {
+    id: tagRef.id,
+    ref: tagRef,
+    name,
+    colour: IMPORT_TAG_COLOUR,
+  };
+}
+
+function getSortOrder(detail, fallbackIndex = 0) {
+  return typeof detail.sortOrder === "number" ? detail.sortOrder : fallbackIndex;
+}
+
 async function commitBatches(writes) {
   for (let index = 0; index < writes.length; index += MAX_BATCH_WRITES) {
     const batch = writeBatch(db);
@@ -264,10 +291,7 @@ export async function importScheduleRows({ eventId, rows }) {
   }
 
   const existingSchedule = await getEventScheduleState(eventId);
-
-  if (existingSchedule.detailDocs.length > 0) {
-    throw new Error("Import is only available while the event schedule detail rows are empty.");
-  }
+  const importTag = await getNextImportTag(eventId);
 
   const sortedRows = [...rows].sort((rowA, rowB) => {
     const dateComparison = rowA.date.localeCompare(rowB.date);
@@ -279,33 +303,64 @@ export async function importScheduleRows({ eventId, rows }) {
     return rowA.rowNumber - rowB.rowNumber;
   });
   const uniqueDates = [...new Set(sortedRows.map((row) => row.date))];
-  const dayRefByDate = new Map(uniqueDates.map((date) => [date, doc(scheduleDaysRef)]));
-  const sortOrderByDate = new Map();
+  const dayRefByDate = new Map(
+    existingSchedule.dayDocs.map((dayDoc) => [dayDoc.data()?.date, dayDoc.ref])
+  );
+  const existingDetailsByDayId = new Map();
+
+  existingSchedule.detailDocs.forEach((detailDoc, detailIndex) => {
+    const scheduleDayId = detailDoc.data()?.scheduleDayId;
+    if (!scheduleDayId) return;
+
+    const details = existingDetailsByDayId.get(scheduleDayId) || [];
+    details.push({
+      id: detailDoc.id,
+      ...detailDoc.data(),
+      fallbackIndex: detailIndex,
+    });
+    existingDetailsByDayId.set(scheduleDayId, details);
+  });
+
+  const nextSortOrderByDayId = new Map();
   const writes = [];
 
-  existingSchedule.dayDocs.forEach((dayDoc) => {
-    writes.push((batch) => {
-      batch.delete(dayDoc.ref);
+  writes.push((batch) => {
+    batch.set(importTag.ref, {
+      eventId,
+      name: importTag.name,
+      colour: importTag.colour,
+      createdAt: serverTimestamp(),
     });
   });
 
   uniqueDates.forEach((date) => {
-    const dayRef = dayRefByDate.get(date);
-    writes.push((batch) => {
-      batch.set(dayRef, {
-        eventId,
-        date,
-        summary: "",
-        endOfDayTarget: "",
-        createdAt: serverTimestamp(),
+    if (!dayRefByDate.has(date)) {
+      const dayRef = doc(scheduleDaysRef);
+      dayRefByDate.set(date, dayRef);
+      writes.push((batch) => {
+        batch.set(dayRef, {
+          eventId,
+          date,
+          summary: "",
+          endOfDayTarget: "",
+          createdAt: serverTimestamp(),
+        });
       });
-    });
+    }
   });
 
   sortedRows.forEach((row) => {
     const dayRef = dayRefByDate.get(row.date);
-    const nextSortOrder = sortOrderByDate.get(row.date) || 0;
-    sortOrderByDate.set(row.date, nextSortOrder + 1);
+    const existingDetails = existingDetailsByDayId.get(dayRef.id) || [];
+    const nextSortOrder = nextSortOrderByDayId.has(dayRef.id)
+      ? nextSortOrderByDayId.get(dayRef.id)
+      : existingDetails.reduce(
+          (highestSortOrder, detail, detailIndex) =>
+            Math.max(highestSortOrder, getSortOrder(detail, detail.fallbackIndex ?? detailIndex)),
+          -1
+        ) + 1;
+
+    nextSortOrderByDayId.set(dayRef.id, nextSortOrder + 1);
 
     writes.push((batch) => {
       batch.set(doc(scheduleDetailsRef), {
@@ -319,7 +374,7 @@ export async function importScheduleRows({ eventId, rows }) {
         notes: "",
         sortOrder: nextSortOrder,
         colour: "",
-        tagId: "",
+        tagId: importTag.id,
         locationId: "",
         companyIds: [],
         createdAt: serverTimestamp(),
@@ -332,5 +387,7 @@ export async function importScheduleRows({ eventId, rows }) {
   return {
     dayCount: uniqueDates.length,
     detailCount: sortedRows.length,
+    tagId: importTag.id,
+    tagName: importTag.name,
   };
 }
