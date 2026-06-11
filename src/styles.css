@@ -200,7 +200,8 @@
     margin: 0;
     position: absolute;
     right: 16px;
-    top: 16px;
+    top: 50%;
+    transform: translateY(-50%);
   }
 }
 
@@ -1295,6 +1296,11 @@ textarea {
   color: var(--color-text);
   font-weight: var(--font-weight-bold);
   white-space: nowrap;
+}
+
+.schedule-day-entry-count {
+  font-style: italic;
+  font-weight: var(--font-weight-regular);
 }
 
 .target-cell {
@@ -4194,7 +4200,9 @@ textarea {
     border: 1px solid var(--color-divider-strong);
     border-radius: var(--radius-md);
     margin-bottom: 10px;
+    min-height: calc(var(--touch-target) + 32px);
     padding: var(--space-4);
+    padding-right: calc(var(--touch-target) + 32px);
   }
 
   .schedule-days-table td {
@@ -4216,12 +4224,16 @@ textarea {
     white-space: normal;
   }
 
+  .schedule-days-table .date-cell::before {
+    display: none;
+  }
+
   .schedule-days-table .summary-cell::before {
     display: none;
   }
 
   .schedule-days-table .summary-cell {
-    padding-bottom: 2px;
+    padding-bottom: 0;
     padding-top: 2px;
   }
 
@@ -4230,7 +4242,7 @@ textarea {
   }
 
   .schedule-days-table .target-summary-cell {
-    padding-top: 2px;
+    padding-top: 0;
   }
 
   .schedule-days-table .target-summary-cell:has(.eod-text:empty) {

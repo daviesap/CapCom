@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDocs,
   limit,
@@ -38,13 +39,6 @@ function normaliseIssueData(issueData) {
     detail: String(issueData.detail || "").trim(),
     status: ISSUE_STATUSES.includes(issueData.status) ? issueData.status : ISSUE_DEFAULTS.status,
     type: ISSUE_TYPES.includes(issueData.type) ? issueData.type : ISSUE_DEFAULTS.type,
-  };
-}
-
-function normaliseExistingIssueImage(issueData = {}) {
-  return {
-    imagePath: typeof issueData.imagePath === "string" ? issueData.imagePath : "",
-    imageUrl: typeof issueData.imageUrl === "string" ? issueData.imageUrl : "",
   };
 }
 
@@ -103,8 +97,6 @@ export async function createIssue(issueData, imageFile, currentUserProfile) {
   const issueRef = doc(issuesRef);
   await setDoc(issueRef, {
     ...normalisedIssue,
-    imagePath: "",
-    imageUrl: "",
     createdAt: serverTimestamp(),
     createdBy: currentUserProfile?.id || currentUserProfile?.uid || null,
     createdByName: currentUserProfile?.displayName || currentUserProfile?.email || "",
@@ -137,15 +129,10 @@ export async function updateIssue(issueId, issueData, imageFile, options = {}) {
     throw new Error("Issue title is required.");
   }
 
-  const existingImageData = normaliseExistingIssueImage({
-    imagePath: options.existingImagePath,
-    imageUrl: options.existingImageUrl,
-  });
-  const nextImageData = options.removeImage ? { imagePath: "", imageUrl: "" } : existingImageData;
   const issueRef = doc(db, "issues", issueId);
   await updateDoc(issueRef, {
     ...normalisedIssue,
-    ...nextImageData,
+    ...(options.removeImage ? { imagePath: deleteField(), imageUrl: deleteField() } : {}),
     updatedAt: serverTimestamp(),
   });
 
@@ -181,14 +168,13 @@ export async function updateIssue(issueId, issueData, imageFile, options = {}) {
   }
 }
 
-export async function updateIssueStatus(issueId, status, issueData = {}) {
+export async function updateIssueStatus(issueId, status) {
   if (!ISSUE_STATUSES.includes(status)) {
     throw new Error("Choose a valid issue status.");
   }
 
   return updateDoc(doc(db, "issues", issueId), {
     status,
-    ...normaliseExistingIssueImage(issueData),
     updatedAt: serverTimestamp(),
   });
 }

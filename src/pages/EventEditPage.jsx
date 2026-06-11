@@ -928,6 +928,16 @@ export default function EventEditPage() {
   const scheduleDetails = useMemo(() => {
     return Object.values(detailsByDayId).flat();
   }, [detailsByDayId]);
+
+  const scheduleDetailCountByDayId = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(detailsByDayId).map(([scheduleDayId, details]) => [
+        scheduleDayId,
+        details.length,
+      ])
+    );
+  }, [detailsByDayId]);
+
   const currentScheduleDateRange = useMemo(
     () => getScheduleDateRangeFromDays(scheduleDays),
     [scheduleDays]
@@ -4741,6 +4751,7 @@ export default function EventEditPage() {
       {activeTab === "summary" ? (
       <SummaryPanel
         scheduleDays={scheduleDays}
+        detailCountByDayId={scheduleDetailCountByDayId}
         editingDayId={editingDayId}
         editingDayMode={editingDayMode}
         editingDayDraft={editingDayDraft}

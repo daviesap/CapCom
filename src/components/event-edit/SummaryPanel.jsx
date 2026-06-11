@@ -3,6 +3,7 @@ import { CapcomIcon } from "../../icons/capcomIcons.jsx";
 
 export default function SummaryPanel({
   scheduleDays,
+  detailCountByDayId,
   editingDayId,
   editingDayMode,
   editingDayDraft,
@@ -41,10 +42,17 @@ export default function SummaryPanel({
             <tbody>
               {scheduleDays.map((day) => {
                 const friendlyDate = formatFriendlyDate(day.date);
+                const detailCount = detailCountByDayId?.[day.id] || 0;
+                const detailCountLabel = `${detailCount} ${detailCount === 1 ? "row" : "rows"}`;
 
                 return (
                   <tr key={day.id}>
-                    <td className="date-cell" data-label="Date">{friendlyDate}</td>
+                    <td className="date-cell" data-label="Date">
+                      {friendlyDate}{" "}
+                      <span className="schedule-day-entry-count">
+                        ({detailCountLabel})
+                      </span>
+                    </td>
                     <td className="summary-cell" data-label="Summary">
                       <span className="display-text">
                         {day.summary || ""}

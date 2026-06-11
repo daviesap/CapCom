@@ -653,7 +653,6 @@ export default function AdminPage() {
       const savedIssue = isEditingIssue
         ? await updateIssue(editingIssueId, issueForm, issueImageFile, {
             existingImagePath: currentIssueImage.path,
-            existingImageUrl: currentIssueImage.url,
             removeImage: isIssueImageRemoved && !issueImageFile,
           })
         : await createIssue(issueForm, issueImageFile, userProfile);
@@ -678,7 +677,7 @@ export default function AdminPage() {
     setIssueError("");
 
     try {
-      await updateIssueStatus(issue.id, status, issue);
+      await updateIssueStatus(issue.id, status);
       setActiveIssueStatusMenuId("");
       setIssues((currentIssues) =>
         currentIssues.map((currentIssue) =>

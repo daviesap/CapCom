@@ -330,8 +330,6 @@ service cloud.firestore {
           "createdBy",
           "createdByName",
           "detail",
-          "imagePath",
-          "imageUrl",
           "status",
           "title",
           "type",
@@ -342,10 +340,8 @@ service cloud.firestore {
         && issue.title.size() <= 180
         && issue.detail is string
         && issue.detail.size() <= 5000
-        && issue.imagePath is string
-        && issue.imagePath.size() <= 500
-        && issue.imageUrl is string
-        && issue.imageUrl.size() <= 2000
+        && (!issue.keys().hasAny(["imagePath"]) || (issue.imagePath is string && issue.imagePath.size() <= 500))
+        && (!issue.keys().hasAny(["imageUrl"]) || (issue.imageUrl is string && issue.imageUrl.size() <= 2000))
         && issue.status in ["Open", "Closed"]
         && issue.type in ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"]
         && issue.createdAt is timestamp
