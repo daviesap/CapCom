@@ -3541,7 +3541,6 @@ export default function EventEditPage() {
       setOpenActionMenuId("");
     } catch (deleteError) {
       console.error(deleteError);
-      setError("Could not delete schedule detail.");
       await loadScheduleDetails(scheduleDays);
     } finally {
       setSavingDetailId("");
