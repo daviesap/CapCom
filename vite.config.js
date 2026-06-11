@@ -55,7 +55,7 @@ export default defineConfig({
             return "icons-vendor";
           }
 
-          return "vendor";
+          return undefined;
         },
       },
     },

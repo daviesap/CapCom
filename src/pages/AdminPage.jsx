@@ -33,6 +33,7 @@ import {
   updateIssueStatus,
   validateIssueImageFile,
 } from "../services/issueService.js";
+import { notify } from "../utils/notify.js";
 
 const emptyClientForm = {
   clientName: "",
@@ -639,6 +640,8 @@ export default function AdminPage() {
       await loadIssues();
       if (savedIssue.imageUploadWarning) {
         setIssueError(savedIssue.imageUploadWarning);
+      } else {
+        notify.success("Issue saved.");
       }
     } catch (saveError) {
       console.error(saveError);

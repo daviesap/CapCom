@@ -7,7 +7,6 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import * as XLSX from "xlsx";
 import { db } from "../firebase/firestore";
 import { assertOnline } from "./localScheduleCache.js";
 
@@ -19,6 +18,16 @@ const scheduleDaysRef = collection(db, "scheduleDays");
 const scheduleDetailsRef = collection(db, "scheduleDetails");
 const tagsRef = collection(db, "tags");
 const IMPORT_TAG_COLOUR = "#F39200";
+
+let xlsxModulePromise = null;
+
+async function getXlsxModule() {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import("xlsx");
+  }
+
+  return xlsxModulePromise;
+}
 
 function normaliseHeader(value) {
   return String(value || "").trim().toLowerCase();
@@ -66,13 +75,13 @@ function formatDateParts(year, month, day) {
   return `${numericYear}-${padNumber(numericMonth)}-${padNumber(numericDay)}`;
 }
 
-function normaliseDate(value) {
+function normaliseDate(value, xlsx) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return formatDateParts(value.getFullYear(), value.getMonth() + 1, value.getDate());
   }
 
   if (typeof value === "number" && Number.isFinite(value)) {
-    const parsedDate = XLSX.SSF.parse_date_code(value);
+    const parsedDate = xlsx.SSF.parse_date_code(value);
     if (parsedDate) return formatDateParts(parsedDate.y, parsedDate.m, parsedDate.d);
   }
 
@@ -97,7 +106,7 @@ function normaliseDate(value) {
   return "";
 }
 
-function normaliseTime(value) {
+function normaliseTime(value, xlsx) {
   if (isBlankCell(value)) return "";
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -105,7 +114,7 @@ function normaliseTime(value) {
   }
 
   if (typeof value === "number" && Number.isFinite(value)) {
-    const parsedTime = XLSX.SSF.parse_date_code(value);
+    const parsedTime = xlsx.SSF.parse_date_code(value);
     if (parsedTime) return `${padNumber(parsedTime.H)}:${padNumber(parsedTime.M)}`;
   }
 
@@ -125,31 +134,31 @@ function normaliseTime(value) {
   return `${padNumber(hours)}:${padNumber(minutes)}`;
 }
 
-function getWorksheetRows(workbook) {
+function getWorksheetRows(workbook, xlsx) {
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) {
     throw new Error("The import file does not contain a worksheet.");
   }
 
-  return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+  return xlsx.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
     header: 1,
     raw: true,
     defval: "",
   });
 }
 
-async function readWorkbook(file) {
+async function readWorkbook(file, xlsx) {
   const extension = file.name.split(".").pop()?.toLowerCase();
 
   if (extension === "csv") {
-    return XLSX.read(await file.text(), {
+    return xlsx.read(await file.text(), {
       type: "string",
       cellDates: true,
     });
   }
 
   if (extension === "xlsx") {
-    return XLSX.read(await file.arrayBuffer(), {
+    return xlsx.read(await file.arrayBuffer(), {
       type: "array",
       cellDates: true,
     });
@@ -179,8 +188,9 @@ function isBlankImportRow(row, columnIndexes) {
 export async function parseScheduleImportFile(file) {
   if (!file) throw new Error("Choose a CSV or XLSX file to import.");
 
-  const workbook = await readWorkbook(file);
-  const rows = getWorksheetRows(workbook);
+  const xlsx = await getXlsxModule();
+  const workbook = await readWorkbook(file, xlsx);
+  const rows = getWorksheetRows(workbook, xlsx);
   const headerIndex = rows.findIndex((row) => !isBlankRow(row));
 
   if (headerIndex === -1) {
@@ -195,8 +205,8 @@ export async function parseScheduleImportFile(file) {
     if (isBlankImportRow(row, columnIndexes)) return;
 
     const rowNumber = headerIndex + rowOffset + 2;
-    const date = normaliseDate(row[columnIndexes.date]);
-    const time = normaliseTime(row[columnIndexes.time]);
+    const date = normaliseDate(row[columnIndexes.date], xlsx);
+    const time = normaliseTime(row[columnIndexes.time], xlsx);
     const description = String(row[columnIndexes.description] || "").trim();
 
     if (!description) return;

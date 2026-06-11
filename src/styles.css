@@ -3374,10 +3374,6 @@ textarea {
   }
 }
 
-.success-message {
-  color: var(--color-success-text);
-}
-
 .offline-message {
   align-items: flex-start;
   background: var(--color-warning-bg);
