@@ -30,42 +30,54 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <h1 className="page-title">CapCom v2</h1>
-        <p className="page-subtitle">Sign in with Firebase Authentication.</p>
+      <div className="login-panel">
+        <img className="login-logo" src="/icon-512x512.png" alt="CapCom" />
 
-        <div className="login-fields">
-          <div className="form-row">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+        <form className="login-card" onSubmit={handleSubmit}>
+          <h1 className="page-title">CapCom</h1>
+          <p className="page-subtitle">Please sign in.</p>
+
+          <div className="login-fields">
+            <div className="form-row">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-row">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </div>
           </div>
 
-          <div className="form-row">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+          {error ? <p className="error">{error}</p> : null}
+
+          <div className="actions">
+            <button className="button" type="submit" disabled={submitting}>
+              {submitting ? "Signing in..." : "Sign In"}
+            </button>
           </div>
-        </div>
+        </form>
 
-        {error ? <p className="error">{error}</p> : null}
-
-        <div className="actions">
-          <button className="button" type="submit" disabled={submitting}>
-            {submitting ? "Signing in..." : "Sign In"}
-          </button>
-        </div>
-      </form>
+        <p className="login-credit">
+          Powered by CapCom
+          <br />
+          from Flair Ltd
+          <br />
+          <a href="https://www.flair.london/">www.flair.london</a>
+        </p>
+      </div>
     </main>
   );
 }

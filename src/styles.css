@@ -3427,6 +3427,21 @@ textarea {
   padding: var(--space-9);
 }
 
+.login-panel {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  width: 100%;
+}
+
+.login-logo {
+  display: block;
+  height: 104px;
+  object-fit: contain;
+  width: 104px;
+}
+
 .login-card {
   background: var(--card-background);
   border: 1px solid var(--card-border);
@@ -3434,6 +3449,19 @@ textarea {
   max-width: 380px;
   padding: var(--space-10);
   width: 100%;
+}
+
+.login-credit {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-copy);
+  margin: 0;
+  text-align: center;
+}
+
+.login-credit a {
+  color: inherit;
+  font-weight: 600;
 }
 
 .login-fields {
