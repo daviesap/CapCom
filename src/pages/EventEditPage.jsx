@@ -163,6 +163,13 @@ function applyScheduleDateRangeToEventForm(eventForm, scheduleDays) {
   };
 }
 
+function getScheduleDaysOutsideRange(scheduleDays, startDate, endDate) {
+  return scheduleDays.filter((day) => {
+    if (!day.date) return false;
+    return day.date < startDate || day.date > endDate;
+  });
+}
+
 const eventEditTabs = [
   { id: "info", label: "Info", icon: "info" },
   { id: "summary", label: "Summary", icon: "summary" },
@@ -541,6 +548,7 @@ export default function EventEditPage() {
   const [form, setForm] = useState(emptyEventForm);
   const [savedEventForm, setSavedEventForm] = useState(emptyEventForm);
   const [isEditingEventDetails, setIsEditingEventDetails] = useState(false);
+  const [isEditingEventScheduleRange, setIsEditingEventScheduleRange] = useState(false);
   const [eventImageFile, setEventImageFile] = useState(null);
   const [eventImagePreviewUrl, setEventImagePreviewUrl] = useState("");
   const [scheduleDays, setScheduleDays] = useState([]);
@@ -921,6 +929,17 @@ export default function EventEditPage() {
   const scheduleDetails = useMemo(() => {
     return Object.values(detailsByDayId).flat();
   }, [detailsByDayId]);
+  const currentScheduleDateRange = useMemo(
+    () => getScheduleDateRangeFromDays(scheduleDays),
+    [scheduleDays]
+  );
+  const hasScheduleDays = scheduleDays.length > 0;
+  const currentScheduleRangeLabel = currentScheduleDateRange
+    ? formatEventDateRange(
+        currentScheduleDateRange.scheduleStartDate,
+        currentScheduleDateRange.scheduleEndDate
+      )
+    : "";
   const showImportSchedule =
     !loading &&
     !isWriteDisabled &&
@@ -1406,6 +1425,7 @@ export default function EventEditPage() {
 
   const startEditingEventDetails = () => {
     setForm((current) => applyScheduleDateRangeToEventForm(current, scheduleDays));
+    setIsEditingEventScheduleRange(false);
     setIsEditingEventDetails(true);
     setMessage("");
     setError("");
@@ -1438,6 +1458,7 @@ export default function EventEditPage() {
   const cancelEditingEventDetails = () => {
     setForm(savedEventForm);
     setEventImageFile(null);
+    setIsEditingEventScheduleRange(false);
     setIsEditingEventDetails(false);
     setError("");
   };
@@ -4408,11 +4429,37 @@ export default function EventEditPage() {
     setError("");
 
     try {
-      const nextEventForm = applyScheduleDateRangeToEventForm(form, scheduleDays);
+      const shouldUseEditedScheduleRange = !hasScheduleDays || isEditingEventScheduleRange;
+      const nextEventForm = shouldUseEditedScheduleRange
+        ? form
+        : applyScheduleDateRangeToEventForm(form, scheduleDays);
       const validationMessage = validateEventForm(nextEventForm, userProfile);
       if (validationMessage) {
         setError(validationMessage);
         return;
+      }
+
+      if (hasScheduleDays && isEditingEventScheduleRange) {
+        const daysToRemove = getScheduleDaysOutsideRange(
+          scheduleDays,
+          nextEventForm.scheduleStartDate,
+          nextEventForm.scheduleEndDate
+        );
+
+        if (daysToRemove.length > 0) {
+          const detailsByRemovedDayId = await getScheduleDetailsForEvent(
+            eventId,
+            daysToRemove.map((day) => day.id)
+          );
+          const hasDetailsToRemove = Object.values(detailsByRemovedDayId).some(
+            (details) => details.length > 0
+          );
+
+          if (hasDetailsToRemove) {
+            setError("Cannot remove schedule dates that contain schedule rows.");
+            return;
+          }
+        }
       }
 
       const imageUrl = eventImageFile
@@ -4435,6 +4482,7 @@ export default function EventEditPage() {
       setForm(eventFormToSave);
       setSavedEventForm(eventFormToSave);
       setEventImageFile(null);
+      setIsEditingEventScheduleRange(false);
       setIsEditingEventDetails(false);
       applyScheduleDays(days);
       await loadCompanies(eventFormToSave.clientId);
@@ -4540,6 +4588,7 @@ export default function EventEditPage() {
       const result = await importScheduleRows({ eventId, rows });
       const days = await getScheduleDays(eventId);
       setScheduleDays(days);
+      setForm((current) => applyScheduleDateRangeToEventForm(current, days));
       await Promise.all([
         loadScheduleDetails(days),
         loadTags(),
@@ -4721,12 +4770,16 @@ export default function EventEditPage() {
         savingEvent={savingEvent}
         importingSchedule={importingSchedule}
         canImportSchedule={canImportSchedule}
+        hasScheduleDays={hasScheduleDays}
+        isEditingScheduleRange={isEditingEventScheduleRange}
+        currentScheduleRangeLabel={currentScheduleRangeLabel}
         onStartEditing={startEditingEventDetails}
         onSubmit={handleEventSave}
         onCancel={cancelEditingEventDetails}
         onUpdateField={updateField}
         onImageChange={handleEventImageChange}
         onRemoveImage={removeEventImage}
+        onStartEditingScheduleRange={() => setIsEditingEventScheduleRange(true)}
         onImportSchedule={() => {
           setMessage("");
           setError("");

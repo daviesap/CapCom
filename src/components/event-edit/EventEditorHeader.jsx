@@ -12,6 +12,9 @@ export default function EventEditorHeader({
   savingEvent,
   importingSchedule = false,
   canImportSchedule = false,
+  hasScheduleDays = false,
+  isEditingScheduleRange = false,
+  currentScheduleRangeLabel = "",
   onStartEditing,
   onSubmit,
   onCancel,
@@ -19,8 +22,12 @@ export default function EventEditorHeader({
   onImageChange,
   onRemoveImage,
   onImportSchedule,
+  onStartEditingScheduleRange,
   showSummary = true,
 }) {
+  const scheduleDateFieldsDisabled = isOffline || (hasScheduleDays && !isEditingScheduleRange);
+  const showScheduleDateFields = !hasScheduleDays || isEditingScheduleRange;
+
   return (
     <section className={showSummary ? "event-edit-header" : "event-edit-header event-edit-header-modal-only"}>
       {showSummary ? (
@@ -126,37 +133,54 @@ export default function EventEditorHeader({
                 required
               />
             </div>
-            <div className="form-row">
-              <label htmlFor="editScheduleStartDate">Schedule start date</label>
-              <input
-                id="editScheduleStartDate"
-                type="date"
-                value={form.scheduleStartDate}
-                disabled={isOffline}
-                onChange={(event) => onUpdateField("scheduleStartDate", event.target.value)}
-                required
-              />
-            </div>
-            <div className="form-row">
-              <label htmlFor="editScheduleEndDate">Schedule end date</label>
-              <input
-                id="editScheduleEndDate"
-                type="date"
-                value={form.scheduleEndDate}
-                disabled={isOffline}
-                onChange={(event) => onUpdateField("scheduleEndDate", event.target.value)}
-                required
-              />
-            </div>
+            {hasScheduleDays ? (
+              <div className="form-row full schedule-range-control">
+                <div className="schedule-range-control-header">
+                  <p className="item-meta">
+                    Current schedule dates: {currentScheduleRangeLabel || "No schedule dates"}
+                  </p>
+                  {!isEditingScheduleRange ? (
+                    <button
+                      className="compact-button"
+                      type="button"
+                      disabled={isOffline}
+                      onClick={onStartEditingScheduleRange}
+                    >
+                      <CapcomIcon name="edit" size={16} weight="bold" />
+                      <span className="button-label">Edit</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {showScheduleDateFields ? (
+              <>
+                <div className="form-row">
+                  <label htmlFor="editScheduleStartDate">Schedule start date</label>
+                  <input
+                    id="editScheduleStartDate"
+                    type="date"
+                    value={form.scheduleStartDate}
+                    disabled={scheduleDateFieldsDisabled}
+                    onChange={(event) => onUpdateField("scheduleStartDate", event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor="editScheduleEndDate">Schedule end date</label>
+                  <input
+                    id="editScheduleEndDate"
+                    type="date"
+                    value={form.scheduleEndDate}
+                    disabled={scheduleDateFieldsDisabled}
+                    onChange={(event) => onUpdateField("scheduleEndDate", event.target.value)}
+                    required
+                  />
+                </div>
+              </>
+            ) : null}
             <div className="form-row full">
               <label htmlFor="editEventImage">Event image</label>
-              <input
-                id="editEventImage"
-                type="file"
-                accept="image/*"
-                disabled={savingEvent || isOffline}
-                onChange={onImageChange}
-              />
               {imageUrl ? (
                 <div className="event-image-upload-preview">
                   <img src={imageUrl} alt="" />
@@ -170,7 +194,16 @@ export default function EventEditorHeader({
                   </button>
                 </div>
               ) : (
-                <p className="item-meta">Upload a small image, up to 2 MB.</p>
+                <>
+                  <input
+                    id="editEventImage"
+                    type="file"
+                    accept="image/*"
+                    disabled={savingEvent || isOffline}
+                    onChange={onImageChange}
+                  />
+                  <p className="item-meta">Upload a small image, up to 2 MB.</p>
+                </>
               )}
             </div>
           </div>
