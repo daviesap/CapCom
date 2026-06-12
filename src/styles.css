@@ -1196,11 +1196,6 @@ textarea {
   overflow-x: auto;
 }
 
-.update-date-range-button {
-  margin-top: var(--space-7);
-  width: 100%;
-}
-
 .schedule-days-table {
   border-collapse: collapse;
   min-width: 760px;
