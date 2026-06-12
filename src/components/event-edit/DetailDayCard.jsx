@@ -1,4 +1,3 @@
-import { useState } from "react";
 import DetailRow from "./DetailRow.jsx";
 import DraftDetailRow from "./DraftDetailRow.jsx";
 import { CapcomIcon } from "../../icons/capcomIcons.jsx";
@@ -32,12 +31,14 @@ export default function DetailDayCard({
   rowNotes,
   rowActions,
   draftActions,
+  isCollapsed,
+  onExpand,
+  onToggleCollapsed,
 }) {
   const { formatDetailDate } = detailDisplay;
   const { isOffline, addDraftDetail, startEditingDay } = dayActions;
   const hiddenDetailCount = allDayDetailCount - dayDetails.length;
   const hasRowsOrDrafts = dayDetails.length > 0 || draftDetails.length > 0;
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const detailListId = `detail-day-${day.id}-rows`;
 
   return (
@@ -50,7 +51,7 @@ export default function DetailDayCard({
               type="button"
               aria-controls={detailListId}
               aria-expanded={!isCollapsed}
-              onClick={() => setIsCollapsed((current) => !current)}
+              onClick={onToggleCollapsed}
             >
               <span className="accordion-indicator" aria-hidden="true">
                 <CapcomIcon
@@ -74,7 +75,7 @@ export default function DetailDayCard({
               type="button"
               disabled={isOffline}
               onClick={() => {
-                setIsCollapsed(false);
+                onExpand();
                 addDraftDetail(day.id);
               }}
             >

@@ -725,7 +725,12 @@ summary:focus-visible {
 }
 
 .schedule-dock-button {
-  cursor: default;
+  cursor: pointer;
+}
+
+.schedule-dock-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .schedule-dock-button:hover,

@@ -1,12 +1,14 @@
 import { CapcomIcon } from "../../icons/capcomIcons.jsx";
 
-function ScheduleDockButton({ icon, label }) {
+function ScheduleDockButton({ disabled = false, icon, label, onClick }) {
   return (
     <button
       className="schedule-dock-button"
       type="button"
       aria-label={label}
       title={label}
+      disabled={disabled}
+      onClick={onClick}
     >
       <CapcomIcon name={icon} size={16} weight="bold" />
       <span className="schedule-dock-label">{label}</span>
@@ -14,15 +16,28 @@ function ScheduleDockButton({ icon, label }) {
   );
 }
 
-export default function ScheduleControlDock({ children }) {
+export default function ScheduleControlDock({
+  children,
+  dateGroupControlLabel,
+  dateGroupControlIcon,
+  onToggleDateGroups,
+  hasDateGroups,
+  historicalEntriesControlLabel,
+  onToggleHistoricalEntries,
+  hasHistoricalEntries,
+}) {
   return (
     <div className="schedule-control-dock-wrap">
       <div className="schedule-control-dock">
         <div className="schedule-dock-filters">{children}</div>
         <div className="schedule-dock-actions" aria-label="Schedule controls">
           <div className="schedule-dock-inline-actions">
-            <ScheduleDockButton icon="caretDoubleDown" label="Expand all" />
-            <ScheduleDockButton icon="caretDoubleRight" label="Collapse all" />
+            <ScheduleDockButton
+              icon={dateGroupControlIcon}
+              label={dateGroupControlLabel}
+              onClick={onToggleDateGroups}
+              disabled={!hasDateGroups}
+            />
           </div>
           <label className="schedule-dock-toggle" title="Allow row sorting">
             <input type="checkbox" />
@@ -40,8 +55,12 @@ export default function ScheduleControlDock({ children }) {
               <CapcomIcon name="overflow" size={18} weight="bold" />
             </summary>
             <div className="schedule-dock-menu-panel">
-              <ScheduleDockButton icon="caretDoubleDown" label="Expand all" />
-              <ScheduleDockButton icon="caretDoubleRight" label="Collapse all" />
+              <ScheduleDockButton
+                icon="bookOpen"
+                label={historicalEntriesControlLabel}
+                onClick={onToggleHistoricalEntries}
+                disabled={!hasHistoricalEntries}
+              />
             </div>
           </details>
         </div>

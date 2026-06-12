@@ -1,6 +1,9 @@
 import DetailDayCard from "./DetailDayCard.jsx";
 import { filterDetailRows } from "./detailFilters.js";
 
+const emptyCollapsedDayIds = new Set();
+const noop = () => {};
+
 export default function DetailPanel({
   scheduleDays,
   detailsByDayId,
@@ -66,6 +69,9 @@ export default function DetailPanel({
   removeDraftDetail,
   savingDraftDayId,
   saveDraftDetail,
+  collapsedDayIds = emptyCollapsedDayIds,
+  expandDay = noop,
+  toggleDayCollapsed = noop,
 }) {
   const detailFilters = {
     selectedTagFilterIds,
@@ -201,6 +207,9 @@ export default function DetailPanel({
               rowNotes={rowNotes}
               rowActions={rowActions}
               draftActions={draftActions}
+              isCollapsed={collapsedDayIds.has(day.id)}
+              onExpand={() => expandDay(day.id)}
+              onToggleCollapsed={() => toggleDayCollapsed(day.id)}
             />
           ))}
         </section>

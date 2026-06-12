@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider.jsx";
 import EventEditorHeader from "../../components/event-edit/EventEditorHeader.jsx";
@@ -36,6 +36,14 @@ import ScheduleDetailModals from "./ScheduleDetailModals.jsx";
 import TruckDetailModals from "./TruckDetailModals.jsx";
 
 const noopSetTopbarConfig = () => {};
+
+function getBrowserTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function EventEditPage() {
   const { eventId } = useParams();
@@ -102,12 +110,109 @@ export default function EventEditPage() {
   });
   const [activeTab, setActiveTab] = useState("info");
   const [activeSettingsTab, setActiveSettingsTab] = useState("tags");
+  const [collapsedScheduleDayIds, setCollapsedScheduleDayIds] = useState(() => new Set());
+  const [showHistoricalEntries, setShowHistoricalEntries] = useState(false);
   const draggedLocationIdRef = useRef("");
   const canManageCompanyContacts = !isEventReadOnly && (isSuperAdmin || isAdmin);
   const canManageFilteredViews = !isEventReadOnly && (isSuperAdmin || isAdmin || isUser);
   const canUpdateShareOutput = !isEventReadOnly && (isSuperAdmin || isAdmin || isUser);
   const canUseDebugJson = Boolean(userProfile?.debugMode);
   const canManageContactCompanyOrder = canManageCompanyContacts;
+  const browserTodayDate = getBrowserTodayDateString();
+  const hasHistoricalScheduleDays = useMemo(
+    () => scheduleDays.some((day) => day.date && day.date < browserTodayDate),
+    [browserTodayDate, scheduleDays]
+  );
+  const visibleScheduleDays = useMemo(
+    () =>
+      showHistoricalEntries
+        ? scheduleDays
+        : scheduleDays.filter((day) => !day.date || day.date >= browserTodayDate),
+    [browserTodayDate, scheduleDays, showHistoricalEntries]
+  );
+  const scheduleDayIds = useMemo(
+    () => visibleScheduleDays.map((day) => day.id),
+    [visibleScheduleDays]
+  );
+  const allScheduleDayIds = useMemo(
+    () => scheduleDays.map((day) => day.id),
+    [scheduleDays]
+  );
+  const areAllScheduleDaysCollapsed =
+    scheduleDayIds.length > 0 &&
+    scheduleDayIds.every((dayId) => collapsedScheduleDayIds.has(dayId));
+  const dateGroupControlLabel = areAllScheduleDaysCollapsed
+    ? "Expand all"
+    : "Collapse all";
+  const dateGroupControlIcon = areAllScheduleDaysCollapsed
+    ? "caretDoubleRight"
+    : "caretDoubleDown";
+  const historicalEntriesControlLabel = showHistoricalEntries
+    ? "Hide historical entries"
+    : "Show historical entries";
+
+  useEffect(() => {
+    setCollapsedScheduleDayIds((currentCollapsedDayIds) => {
+      const validDayIds = new Set(allScheduleDayIds);
+      const nextCollapsedDayIds = new Set(
+        [...currentCollapsedDayIds].filter((dayId) => validDayIds.has(dayId))
+      );
+
+      return nextCollapsedDayIds.size === currentCollapsedDayIds.size
+        ? currentCollapsedDayIds
+        : nextCollapsedDayIds;
+    });
+  }, [allScheduleDayIds]);
+
+  const toggleAllScheduleDayGroups = useCallback(() => {
+    setCollapsedScheduleDayIds((currentCollapsedDayIds) => {
+      if (scheduleDayIds.length === 0) {
+        return currentCollapsedDayIds;
+      }
+
+      const allDaysAreCollapsed = scheduleDayIds.every((dayId) =>
+        currentCollapsedDayIds.has(dayId)
+      );
+
+      if (allDaysAreCollapsed) {
+        return new Set(
+          [...currentCollapsedDayIds].filter((dayId) => !scheduleDayIds.includes(dayId))
+        );
+      }
+
+      return new Set([...currentCollapsedDayIds, ...scheduleDayIds]);
+    });
+  }, [scheduleDayIds]);
+
+  const toggleHistoricalEntries = useCallback(() => {
+    setShowHistoricalEntries((current) => !current);
+  }, []);
+
+  const expandScheduleDayGroup = useCallback((dayId) => {
+    setCollapsedScheduleDayIds((currentCollapsedDayIds) => {
+      if (!currentCollapsedDayIds.has(dayId)) {
+        return currentCollapsedDayIds;
+      }
+
+      const nextCollapsedDayIds = new Set(currentCollapsedDayIds);
+      nextCollapsedDayIds.delete(dayId);
+      return nextCollapsedDayIds;
+    });
+  }, []);
+
+  const toggleScheduleDayGroup = useCallback((dayId) => {
+    setCollapsedScheduleDayIds((currentCollapsedDayIds) => {
+      const nextCollapsedDayIds = new Set(currentCollapsedDayIds);
+
+      if (nextCollapsedDayIds.has(dayId)) {
+        nextCollapsedDayIds.delete(dayId);
+      } else {
+        nextCollapsedDayIds.add(dayId);
+      }
+
+      return nextCollapsedDayIds;
+    });
+  }, []);
 
   useEffect(() => {
     const closeCompanyDropdownsOnOutsideClick = (event) => {
@@ -940,7 +1045,15 @@ export default function EventEditPage() {
 
       {activeTab === "detail" ? (
       <>
-        <ScheduleControlDock>
+        <ScheduleControlDock
+          dateGroupControlIcon={dateGroupControlIcon}
+          dateGroupControlLabel={dateGroupControlLabel}
+          hasDateGroups={scheduleDayIds.length > 0}
+          onToggleDateGroups={toggleAllScheduleDayGroups}
+          historicalEntriesControlLabel={historicalEntriesControlLabel}
+          hasHistoricalEntries={hasHistoricalScheduleDays}
+          onToggleHistoricalEntries={toggleHistoricalEntries}
+        >
           <DetailFilters
             usedTags={usedTags}
             usedLocationFilters={usedLocationFilters}
@@ -969,7 +1082,7 @@ export default function EventEditPage() {
         </ScheduleControlDock>
         <section className="panel schedule-panel">
         <DetailPanel
-          scheduleDays={scheduleDays}
+          scheduleDays={visibleScheduleDays}
           detailsByDayId={detailsByDayId}
           selectedTagFilterIds={selectedTagFilterIds}
           locationById={locationById}
@@ -1033,6 +1146,9 @@ export default function EventEditPage() {
           removeDraftDetail={removeDraftDetail}
           savingDraftDayId={savingDraftDayId}
           saveDraftDetail={saveDraftDetail}
+          collapsedDayIds={collapsedScheduleDayIds}
+          expandDay={expandScheduleDayGroup}
+          toggleDayCollapsed={toggleScheduleDayGroup}
         />
       </section>
       </>

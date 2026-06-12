@@ -220,12 +220,17 @@ export default function useEventHeaderEditor({
       const rows = await parseScheduleImportFile(file);
       await importScheduleRows({ eventId, rows });
       const days = await getScheduleDays(eventId);
+      const nextEventForm = applyScheduleDateRangeToEventForm(savedEventForm, days);
       setScheduleDays(days);
-      setForm((current) => applyScheduleDateRangeToEventForm(current, days));
+      setForm(nextEventForm);
+      setSavedEventForm(nextEventForm);
       await Promise.all([
         loadScheduleDetails(days),
         loadTags(),
       ]);
+      setEventImageFile(null);
+      setIsEditingEventScheduleRange(false);
+      setIsEditingEventDetails(false);
     } catch (importError) {
       console.error("Could not import schedule.", importError);
       setError(importError instanceof Error ? importError.message : "Could not import schedule.");
