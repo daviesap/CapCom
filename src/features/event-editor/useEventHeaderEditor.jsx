@@ -71,7 +71,7 @@ export default function useEventHeaderEditor({
 
   const currentScheduleDateRange = getScheduleDateRangeFromDays(scheduleDays);
   const hasScheduleDays = scheduleDays.length > 0;
-  const currentScheduleRangeLabel = currentScheduleDateRange
+  const scheduleRangeLabel = currentScheduleDateRange
     ? formatEventDateRange(
         currentScheduleDateRange.scheduleStartDate,
         currentScheduleDateRange.scheduleEndDate
@@ -86,7 +86,7 @@ export default function useEventHeaderEditor({
     !clearingScheduleDetails &&
     scheduleDetails.length > 0;
   const eventHeaderImageUrl = eventImagePreviewUrl || form.imageUrl;
-  const eventDateRangeLabel = formatEventDateRange(form.startDate, form.endDate);
+  const eventDateRangeLabel = formatEventDateRange(form.firstLiveDay, form.lastLiveDay);
   const eventTopbarDate = eventDateRangeLabel || "No event dates";
 
   const updateField = (field, value) => {
@@ -143,7 +143,7 @@ export default function useEventHeaderEditor({
 
     try {
       const shouldUseEditedScheduleRange = !hasScheduleDays || isEditingEventScheduleRange;
-      const nextEventForm = shouldUseEditedScheduleRange
+      let nextEventForm = shouldUseEditedScheduleRange
         ? form
         : applyScheduleDateRangeToEventForm(form, scheduleDays);
       const validationMessage = validateEventForm(nextEventForm, userProfile);
@@ -151,6 +151,12 @@ export default function useEventHeaderEditor({
         setError(validationMessage);
         return;
       }
+
+      if (isEditingEventScheduleRange) {
+        notify.info("Updating dates");
+      }
+      setIsEditingEventScheduleRange(false);
+      setIsEditingEventDetails(false);
 
       if (hasScheduleDays && isEditingEventScheduleRange) {
         const daysToRemove = getScheduleDaysOutsideRange(
@@ -164,13 +170,26 @@ export default function useEventHeaderEditor({
             eventId,
             daysToRemove.map((day) => day.id)
           );
-          const hasDetailsToRemove = Object.values(detailsByRemovedDayId).some(
-            (details) => details.length > 0
-          );
+          const protectedDates = daysToRemove
+            .filter((day) => detailsByRemovedDayId[day.id]?.length > 0)
+            .map((day) => day.date)
+            .filter(Boolean);
 
-          if (hasDetailsToRemove) {
-            notify.error("Cannot remove schedule dates that contain schedule rows.");
-            return;
+          if (protectedDates.length > 0) {
+            const adjustedScheduleStartDate = [
+              nextEventForm.scheduleStartDate,
+              ...protectedDates,
+            ].sort()[0];
+            const adjustedScheduleEndDate = [
+              nextEventForm.scheduleEndDate,
+              ...protectedDates,
+            ].sort().at(-1);
+
+            nextEventForm = {
+              ...nextEventForm,
+              scheduleStartDate: adjustedScheduleStartDate,
+              scheduleEndDate: adjustedScheduleEndDate,
+            };
           }
         }
       }
@@ -191,8 +210,6 @@ export default function useEventHeaderEditor({
       setForm(eventFormToSave);
       setSavedEventForm(eventFormToSave);
       setEventImageFile(null);
-      setIsEditingEventScheduleRange(false);
-      setIsEditingEventDetails(false);
       applyScheduleDays(days);
       await loadCompanies(eventFormToSave.clientId);
     } catch (saveError) {
@@ -363,7 +380,7 @@ export default function useEventHeaderEditor({
     importingSchedule,
     canImportSchedule,
     hasScheduleDays,
-    currentScheduleRangeLabel,
+    scheduleRangeLabel,
     updateField,
     startEditingEventDetails,
     handleEventSave,

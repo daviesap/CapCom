@@ -2,15 +2,15 @@ import { FALLBACK_FILTERED_VIEW_SORT_ORDER } from "./eventEditorConstants.js";
 
 export function validateEventForm(eventForm, userProfile) {
   if (!eventForm.name.trim()) return "Event name is required.";
-  if (!eventForm.startDate) return "First live day is required.";
-  if (!eventForm.endDate) return "Last live day is required.";
+  if (!eventForm.firstLiveDay) return "First live day is required.";
+  if (!eventForm.lastLiveDay) return "Last live day is required.";
   if (!eventForm.scheduleStartDate) return "Schedule start date is required.";
   if (!eventForm.scheduleEndDate) return "Schedule end date is required.";
   if (userProfile?.role === "SuperAdmin" && !eventForm.clientId) {
     return "Event client is required.";
   }
-  if (eventForm.startDate > eventForm.endDate) {
-    return "Event start date must be before or equal to event end date.";
+  if (eventForm.firstLiveDay > eventForm.lastLiveDay) {
+    return "First live day must be before or equal to last live day.";
   }
   if (eventForm.scheduleStartDate > eventForm.scheduleEndDate) {
     return "Schedule start date must be before or equal to schedule end date.";

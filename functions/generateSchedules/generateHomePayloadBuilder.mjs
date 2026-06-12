@@ -288,8 +288,8 @@ export function buildGenerateHomePayload({
     normaliseString(eventRecord.name),
     normaliseString(eventRecord.venue),
     formatHeaderDateRange(
-      eventRecord.startDate || eventRecord.scheduleStartDate,
-      eventRecord.endDate || eventRecord.scheduleEndDate
+      eventRecord.firstLiveDay || eventRecord.scheduleStartDate,
+      eventRecord.lastLiveDay || eventRecord.scheduleEndDate
     ),
   ].filter(Boolean);
 

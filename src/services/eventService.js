@@ -38,8 +38,8 @@ function logWriteError(action, error, context = {}) {
   console.error(`Firestore write failed: ${action}`, { ...context, error });
 }
 
-function sortEventsByStartDate(events) {
-  return [...events].sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
+function sortEventsByFirstLiveDay(events) {
+  return [...events].sort((a, b) => (a.firstLiveDay || "").localeCompare(b.firstLiveDay || ""));
 }
 
 function getAllowedCachedEvents(userProfile, activeClientId = "") {
@@ -91,7 +91,7 @@ export async function getEvents(userProfile, activeClientId = "") {
         return canReadEvent(userProfile, event, assignment) ? event : null;
       })
     );
-    const events = sortEventsByStartDate(assignedEvents.filter(Boolean));
+    const events = sortEventsByFirstLiveDay(assignedEvents.filter(Boolean));
     cacheEvents(events);
     return events;
   }
@@ -99,11 +99,11 @@ export async function getEvents(userProfile, activeClientId = "") {
   const eventsQuery = isSuperAdmin(userProfile)
     ? activeClientId
       ? query(eventsRef, where("clientId", "==", activeClientId))
-      : query(eventsRef, orderBy("startDate", "asc"))
+      : query(eventsRef, orderBy("firstLiveDay", "asc"))
     : query(eventsRef, where("clientId", "==", userProfile?.clientId || "__missing_client__"));
   try {
     const snapshot = await getDocs(eventsQuery);
-    const events = sortEventsByStartDate(snapshot.docs.map((eventDoc) => ({
+    const events = sortEventsByFirstLiveDay(snapshot.docs.map((eventDoc) => ({
       id: eventDoc.id,
       ...eventDoc.data(),
     })));
@@ -156,8 +156,8 @@ export async function createEvent(eventData, userProfile) {
       venue: eventData.venue || "",
       clientName: eventData.clientName,
       clientId,
-      startDate: eventData.startDate,
-      endDate: eventData.endDate,
+      firstLiveDay: eventData.firstLiveDay,
+      lastLiveDay: eventData.lastLiveDay,
       scheduleStartDate: eventData.scheduleStartDate,
       scheduleEndDate: eventData.scheduleEndDate,
       imageUrl: eventData.imageUrl || "",
@@ -192,8 +192,8 @@ export async function updateEvent(eventId, eventData, userProfile) {
       clientName: eventData.clientName,
       profileId: eventData.profileId,
       clientId,
-      startDate: eventData.startDate,
-      endDate: eventData.endDate,
+      firstLiveDay: eventData.firstLiveDay,
+      lastLiveDay: eventData.lastLiveDay,
       scheduleStartDate: eventData.scheduleStartDate,
       scheduleEndDate: eventData.scheduleEndDate,
       imageUrl: eventData.imageUrl || "",

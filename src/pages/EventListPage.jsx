@@ -15,8 +15,8 @@ const emptyForm = {
   venue: "",
   clientId: "",
   clientName: "",
-  startDate: "",
-  endDate: "",
+  firstLiveDay: "",
+  lastLiveDay: "",
   scheduleStartDate: "",
   scheduleEndDate: "",
 };
@@ -62,7 +62,7 @@ function formatEventDateRange(startDateString, endDateString) {
 }
 
 function formatEventMetaLine(event) {
-  return [event.venue, formatEventDateRange(event.startDate, event.endDate)].filter(Boolean).join(" | ");
+  return [event.venue, formatEventDateRange(event.firstLiveDay, event.lastLiveDay)].filter(Boolean).join(" | ");
 }
 
 const noopSetTopbarConfig = () => {};
@@ -198,6 +198,21 @@ export default function EventListPage() {
     setError("");
 
     try {
+      if (!form.firstLiveDay || !form.lastLiveDay) {
+        setError("First live day and last live day are required.");
+        return;
+      }
+
+      if (!form.scheduleStartDate || !form.scheduleEndDate) {
+        setError("Schedule start date and schedule end date are required.");
+        return;
+      }
+
+      if (form.firstLiveDay > form.lastLiveDay) {
+        setError("First live day must be before or equal to last live day.");
+        return;
+      }
+
       if (form.scheduleStartDate > form.scheduleEndDate) {
         setError("Schedule start date must be before or equal to schedule end date.");
         return;
@@ -313,22 +328,22 @@ export default function EventListPage() {
                   />
                 </div>
                 <div className="form-row">
-                  <label htmlFor="startDate">Start date</label>
+                  <label htmlFor="firstLiveDay">First live day</label>
                   <input
-                    id="startDate"
+                    id="firstLiveDay"
                     type="date"
-                    value={form.startDate}
-                    onChange={(event) => updateField("startDate", event.target.value)}
+                    value={form.firstLiveDay}
+                    onChange={(event) => updateField("firstLiveDay", event.target.value)}
                     required
                   />
                 </div>
                 <div className="form-row">
-                  <label htmlFor="endDate">End date</label>
+                  <label htmlFor="lastLiveDay">Last live day</label>
                   <input
-                    id="endDate"
+                    id="lastLiveDay"
                     type="date"
-                    value={form.endDate}
-                    onChange={(event) => updateField("endDate", event.target.value)}
+                    value={form.lastLiveDay}
+                    onChange={(event) => updateField("lastLiveDay", event.target.value)}
                     required
                   />
                 </div>

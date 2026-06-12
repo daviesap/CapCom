@@ -241,7 +241,7 @@ export default function EventEditPage() {
     importingSchedule,
     canImportSchedule,
     hasScheduleDays,
-    currentScheduleRangeLabel,
+    scheduleRangeLabel,
     updateField,
     startEditingEventDetails,
     handleEventSave,
@@ -965,7 +965,7 @@ export default function EventEditPage() {
         canImportSchedule={canImportSchedule}
         hasScheduleDays={hasScheduleDays}
         isEditingScheduleRange={isEditingEventScheduleRange}
-        currentScheduleRangeLabel={currentScheduleRangeLabel}
+        scheduleRangeLabel={scheduleRangeLabel}
         onStartEditing={startEditingEventDetails}
         onSubmit={handleEventSave}
         onCancel={cancelEditingEventDetails}

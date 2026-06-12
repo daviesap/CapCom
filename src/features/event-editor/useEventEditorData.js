@@ -40,10 +40,10 @@ function buildEventForm(event) {
     clientId: event.clientId || "",
     clientName: event.clientName || "",
     profileId: event.profileId || "",
-    startDate: event.startDate || "",
-    endDate: event.endDate || "",
-    scheduleStartDate: event.scheduleStartDate || event.startDate || "",
-    scheduleEndDate: event.scheduleEndDate || event.endDate || "",
+    firstLiveDay: event.firstLiveDay || "",
+    lastLiveDay: event.lastLiveDay || "",
+    scheduleStartDate: event.scheduleStartDate || event.firstLiveDay || "",
+    scheduleEndDate: event.scheduleEndDate || event.lastLiveDay || "",
     imageUrl: event.imageUrl || "",
     contactCompanyOrder: Array.isArray(event.contactCompanyOrder)
       ? event.contactCompanyOrder

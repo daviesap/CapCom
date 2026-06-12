@@ -14,7 +14,7 @@ export default function EventEditorHeader({
   canImportSchedule = false,
   hasScheduleDays = false,
   isEditingScheduleRange = false,
-  currentScheduleRangeLabel = "",
+  scheduleRangeLabel = "",
   onStartEditing,
   onSubmit,
   onCancel,
@@ -116,9 +116,9 @@ export default function EventEditorHeader({
               <input
                 id="editStartDate"
                 type="date"
-                value={form.startDate}
+                value={form.firstLiveDay}
                 disabled={isOffline}
-                onChange={(event) => onUpdateField("startDate", event.target.value)}
+                onChange={(event) => onUpdateField("firstLiveDay", event.target.value)}
                 required
               />
             </div>
@@ -127,9 +127,9 @@ export default function EventEditorHeader({
               <input
                 id="editEndDate"
                 type="date"
-                value={form.endDate}
+                value={form.lastLiveDay}
                 disabled={isOffline}
-                onChange={(event) => onUpdateField("endDate", event.target.value)}
+                onChange={(event) => onUpdateField("lastLiveDay", event.target.value)}
                 required
               />
             </div>
@@ -137,7 +137,9 @@ export default function EventEditorHeader({
               <div className="form-row full schedule-range-control">
                 <div className="schedule-range-control-header">
                   <p className="item-meta">
-                    Current schedule dates: {currentScheduleRangeLabel || "No schedule dates"}
+                    {scheduleRangeLabel
+                      ? `Schedule ranges from ${scheduleRangeLabel}`
+                      : "No schedule dates"}
                   </p>
                   {!isEditingScheduleRange ? (
                     <button

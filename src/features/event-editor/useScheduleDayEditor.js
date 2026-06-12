@@ -90,8 +90,8 @@ export default function useScheduleDayEditor({
 
   const startEditingScheduleDateRange = () => {
     setScheduleDateRangeDraft({
-      scheduleStartDate: form.scheduleStartDate || form.startDate || "",
-      scheduleEndDate: form.scheduleEndDate || form.endDate || "",
+      scheduleStartDate: form.scheduleStartDate || form.firstLiveDay || "",
+      scheduleEndDate: form.scheduleEndDate || form.lastLiveDay || "",
     });
     setError("");
     setIsEditingScheduleDateRange(true);
