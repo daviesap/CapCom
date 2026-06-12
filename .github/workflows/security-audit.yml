@@ -1,44 +1,106 @@
-name: Weekly AI Security Audit
+name: OpenAI Repository Audit
 
 on:
   schedule:
-    # Runs every Monday at 9:00 AM UTC (Adjust as needed)
-    - cron: '0 9 * * 1'
-  workflow_dispatch: # Allows you to trigger it manually anytime via the UI
+    # Runs automatically every Monday at 9:00 AM UTC
+    - cron: "0 9 * * 1"
 
-# CRITICAL: Force strict read-only permissions
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: "How many days of changes to analyse"
+        required: true
+        default: "7"
+
 permissions:
-  contents: read      # The AI can read the code, but CANNOT write/alter it
-  issues: write       # Allows the agent to open an Issue to send you the report
+  contents: read
+  issues: write
 
 jobs:
-  ai-scan:
+  repository-audit:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Pull down the repository code
-      - name: Checkout Repository
+      - name: Checkout repository code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches full history so the AI can scan changes
+          fetch-depth: 0
 
-      # 2. Extract recent changes (e.g., what changed in the last 7 days)
-      - name: Get Weekly Git Diff
+      - name: Work out review period
+        id: period
         run: |
-          git diff $(git rev-list --max-parents=0 HEAD) HEAD > weekly_changes.diff
+          LOOKBACK_DAYS="${{ github.event.inputs.lookback_days || '7' }}"
+          BASE_COMMIT=$(git rev-list -n 1 --before="$LOOKBACK_DAYS days ago" HEAD || git rev-list --max-parents=0 HEAD)
+          HEAD_COMMIT=$(git rev-parse HEAD)
 
-      # 3. Setup Python to run the AI script
+          echo "lookback_days=$LOOKBACK_DAYS" >> $GITHUB_OUTPUT
+          echo "base_commit=$BASE_COMMIT" >> $GITHUB_OUTPUT
+          echo "head_commit=$HEAD_COMMIT" >> $GITHUB_OUTPUT
+          echo "run_date=$(date -u +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Generate repository facts
+        run: |
+          BASE="${{ steps.period.outputs.base_commit }}"
+          HEAD="${{ steps.period.outputs.head_commit }}"
+          LOOKBACK="${{ steps.period.outputs.lookback_days }}"
+
+          echo "# Repository Audit Facts" > repo_facts.md
+          echo "" >> repo_facts.md
+          echo "**Repository:** ${{ github.repository }}" >> repo_facts.md
+          echo "**Review period:** Last $LOOKBACK days" >> repo_facts.md
+          echo "**Base commit:** \`$BASE\`" >> repo_facts.md
+          echo "**Head commit:** \`$HEAD\`" >> repo_facts.md
+          echo "" >> repo_facts.md
+
+          echo "## Activity Summary" >> repo_facts.md
+          echo "- Commits analysed: $(git rev-list --count $BASE..$HEAD)" >> repo_facts.md
+          echo "- Files changed: $(git diff --name-only $BASE..$HEAD | wc -l | xargs)" >> repo_facts.md
+          echo "" >> repo_facts.md
+
+          echo "## Authors" >> repo_facts.md
+          git log $BASE..$HEAD --format="- %an <%ae>" | sort | uniq >> repo_facts.md || true
+          echo "" >> repo_facts.md
+
+          echo "## Commits" >> repo_facts.md
+          git log $BASE..$HEAD --pretty=format:"- %h %s (%an)" >> repo_facts.md || true
+          echo "" >> repo_facts.md
+          echo "" >> repo_facts.md
+
+          echo "## Changed Files" >> repo_facts.md
+          git diff --name-status $BASE..$HEAD >> repo_facts.md || true
+
+          git diff $BASE..$HEAD > changes.diff || true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci > npm_install_output.txt 2>&1
+        continue-on-error: true
+
+      - name: Run build
+        run: npm run build > build_output.txt 2>&1
+        continue-on-error: true
+
+      - name: Run lint
+        run: npm run lint > lint_output.txt 2>&1
+        continue-on-error: true
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate > audit_output.txt 2>&1
+        continue-on-error: true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      # 4. Install OpenAI / Anthropic or SDK of choice
-      - name: Install Dependencies
+      - name: Install OpenAI SDK
         run: pip install openai
 
-      # 5. Run the AI Agent Scan (Generates a report file)
-      - name: Run AI Audit Agent
+      - name: Query OpenAI audit agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -46,45 +108,112 @@ jobs:
           import os
           from openai import OpenAI
 
-          client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+          client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-          # Read the code diff and core structure
-          with open("weekly_changes.diff", "r") as f:
-              diff_content = f.read()[:100000] # Cap it to fit context windows nicely
+          def read_file(path, limit):
+              if not os.path.exists(path):
+                  return "Not available."
+              with open(path, "r", errors="replace") as f:
+                  return f.read()[:limit]
+
+          repo_facts = read_file("repo_facts.md", 30000)
+          changes = read_file("changes.diff", 150000)
+          npm_install = read_file("npm_install_output.txt", 20000)
+          build = read_file("build_output.txt", 30000)
+          lint = read_file("lint_output.txt", 30000)
+          audit = read_file("audit_output.txt", 30000)
 
           prompt = f"""
-          You are an elite AppSec AI Agent. Analyze the following weekly code changes for:
-          1. Security vulnerabilities (OWASP Top 10, leaked secrets, SQLi, XSS).
-          2. Highlight significant structural changes.
-          
-          Provide a clean Markdown report with severity levels (Critical, High, Medium, Low).
-          DO NOT suggest any code rewrites directly to files; just provide the text report.
+          You are reviewing Andrew's CapCom repository.
 
-          Weekly Diff:
-          {diff_content}
+          This report may be run manually or on a schedule.
+          Do not call it a weekly report.
+          Refer to it as a repository audit or review period.
+
+          CapCom is an event-management product.
+          Prioritise:
+          1. Preventing mistakes
+          2. Reliability
+          3. Security
+          4. Firestore efficiency
+          5. Mobile/PWA usability
+          6. Multi-tenant permissions
+          7. Clear admin workflows
+
+          Produce a concise Markdown report.
+
+          Include:
+          - Executive summary
+          - Activity summary
+          - Security findings
+          - Build/lint/audit findings
+          - Firestore or Firebase concerns
+          - Mobile/PWA concerns
+          - High / Medium / Low priority actions
+          - Plain-English product owner summary
+
+          Use severity tags:
+          [CRITICAL], [HIGH], [MEDIUM], [LOW], [INFO]
+
+          Be practical and evidence-led.
+          Do not invent issues.
+          If there is not enough evidence, say so.
+          Do not recommend unnecessary rewrites.
+
+          Repository facts:
+          {repo_facts}
+
+          npm install output:
+          {npm_install}
+
+          Build output:
+          {build}
+
+          Lint output:
+          {lint}
+
+          npm audit output:
+          {audit}
+
+          Code changes:
+          {changes}
           """
 
           response = client.chat.completions.create(
-              model="gpt-4o", # Or codex/applicable model
-              messages=[{"role": "user", "content": prompt}]
+              model="gpt-5.5",
+              messages=[
+                  {
+                      "role": "system",
+                      "content": "You are a careful senior technical reviewer. Be concise, practical, and evidence-led."
+                  },
+                  {
+                      "role": "user",
+                      "content": prompt
+                  }
+              ]
           )
 
-          with open("ai_report.md", "w") as report_file:
-              report_file.write(response.choices[0].message.content)
+          with open("ai_report.md", "w") as f:
+              f.write(response.choices[0].message.content)
           EOF
+
           python ai_agent.py
 
-      # 6. Send the Report (Creates a GitHub Issue flagged just for you)
-      - name: Deliver Weekly Report
+      - name: Post audit report to GitHub Issues
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const report = fs.readFileSync('ai_report.md', 'utf8');
+            const fs = require("fs");
+
+            const facts = fs.readFileSync("repo_facts.md", "utf8");
+            const report = fs.readFileSync("ai_report.md", "utf8");
+            const runDate = "${{ steps.period.outputs.run_date }}";
+            const lookbackDays = "${{ steps.period.outputs.lookback_days }}";
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Weekly AI Security & Change Report 🛡️`,
-              body: report,
-              labels: ['security', 'ai-audit']
+              title: `🛡️ CapCom Repository Audit - ${runDate} - Last ${lookbackDays} days`,
+              body: `${facts}\n\n---\n\n# OpenAI Review\n\n${report}`,
+              labels: ["security-audit", "repository-audit"]
             });
