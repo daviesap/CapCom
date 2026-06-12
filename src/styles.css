@@ -793,6 +793,17 @@ summary:focus-visible {
   position: relative;
 }
 
+.schedule-dock-toggle-active {
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.schedule-dock-toggle-active:hover,
+.schedule-dock-toggle-active:focus-within {
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+}
+
 .schedule-dock-toggle input {
   clip-path: inset(50%);
   height: 1px;

@@ -30,6 +30,13 @@ export default function ScheduleControlDock({
   onToggleHistoricalEntries,
   hasHistoricalEntries,
 }) {
+  const sortRowsLabel = sortRowsEnabled ? "Sorting rows" : "Sort rows";
+  const sortRowsTitle = sortRowsEnabled
+    ? "Turn off sorting to edit rows"
+    : canSortRows
+      ? "Allow row sorting"
+      : sortRowsDisabledLabel;
+
   return (
     <div className="schedule-control-dock-wrap">
       <div className="schedule-control-dock">
@@ -44,8 +51,12 @@ export default function ScheduleControlDock({
             />
           </div>
           <label
-            className="schedule-dock-toggle"
-            title={canSortRows ? "Allow row sorting" : sortRowsDisabledLabel}
+            className={[
+              "schedule-dock-toggle",
+              sortRowsEnabled ? "schedule-dock-toggle-active" : "",
+            ].filter(Boolean).join(" ")}
+            title={sortRowsTitle}
+            aria-label={sortRowsTitle}
           >
             <input
               type="checkbox"
@@ -56,7 +67,7 @@ export default function ScheduleControlDock({
             <span className="schedule-dock-toggle-track" aria-hidden="true">
               <span className="schedule-dock-toggle-thumb" />
             </span>
-            <span className="schedule-dock-toggle-label">Sort rows</span>
+            <span className="schedule-dock-toggle-label">{sortRowsLabel}</span>
           </label>
           <details className="schedule-dock-menu">
             <summary
