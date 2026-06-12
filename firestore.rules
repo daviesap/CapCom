@@ -367,6 +367,53 @@ service cloud.firestore {
         && nextIssue.updatedAt == request.time;
     }
 
+    function helpItemHasValidShape(helpItem) {
+      return helpItem.keys().hasOnly([
+          "category",
+          "createdAt",
+          "detail",
+          "sort",
+          "title",
+          "type",
+          "updatedAt"
+        ])
+        && helpItem.keys().hasAll([
+          "category",
+          "createdAt",
+          "detail",
+          "sort",
+          "title",
+          "type",
+          "updatedAt"
+        ])
+        && helpItem.type in ["information", "faq"]
+        && helpItem.category is string
+        && helpItem.category.size() > 0
+        && helpItem.category.size() <= 120
+        && helpItem.title is string
+        && helpItem.title.size() > 0
+        && helpItem.title.size() <= 180
+        && helpItem.detail is string
+        && helpItem.detail.size() <= 8000
+        && helpItem.sort is number
+        && helpItem.createdAt is timestamp
+        && helpItem.updatedAt is timestamp;
+    }
+
+    function canCreateHelpItem(helpItem) {
+      return isSuperAdmin()
+        && helpItemHasValidShape(helpItem)
+        && helpItem.createdAt == request.time
+        && helpItem.updatedAt == request.time;
+    }
+
+    function canUpdateHelpItem(existingHelpItem, nextHelpItem) {
+      return isSuperAdmin()
+        && helpItemHasValidShape(nextHelpItem)
+        && nextHelpItem.createdAt == existingHelpItem.createdAt
+        && nextHelpItem.updatedAt == request.time;
+    }
+
     match /users/{uid} {
       allow get, list: if canReadUserProfile(resource.data, uid);
       allow create: if canCreateUserProfile(request.resource.data);
@@ -397,6 +444,13 @@ service cloud.firestore {
       allow create: if canCreateIssue(request.resource.data);
       allow update: if canUpdateIssue(resource.data, request.resource.data);
       allow delete: if false;
+    }
+
+    match /helpItems/{helpItemId} {
+      allow get, list: if hasActiveProfile();
+      allow create: if canCreateHelpItem(request.resource.data);
+      allow update: if canUpdateHelpItem(resource.data, request.resource.data);
+      allow delete: if isSuperAdmin();
     }
 
     match /companies/{companyId} {

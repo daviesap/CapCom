@@ -6,6 +6,7 @@ const navItems = [
   { to: "/events", label: "Events", icon: "event" },
   { to: "/companies", label: "Companies", icon: "company" },
   { to: "/admin", label: "Admin", icon: "admin", requiresAdmin: true },
+  { to: "/help", label: "Help", icon: "question" },
   { to: "/profile", label: "Profile", icon: "profile" },
 ];
 

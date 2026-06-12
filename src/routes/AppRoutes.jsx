@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import("../auth/LoginPage.jsx"));
 const AdminPage = lazy(() => import("../pages/AdminPage.jsx"));
 const EventListPage = lazy(() => import("../pages/EventListPage.jsx"));
 const EventEditPage = lazy(() => import("../pages/EventEditPage.jsx"));
+const HelpPage = lazy(() => import("../pages/HelpPage.jsx"));
 const ProfilePage = lazy(() => import("../pages/ProfilePage.jsx"));
 const ScheduleDaysPage = lazy(() => import("../pages/ScheduleDaysPage.jsx"));
 const ScheduleDetailsPage = lazy(() => import("../pages/ScheduleDetailsPage.jsx"));
@@ -57,6 +58,7 @@ export default function AppRoutes() {
           />
           <Route path="/companies" element={<LazyRoute Component={CompaniesPage} />} />
           <Route path="/admin" element={<LazyRoute Component={AdminPage} />} />
+          <Route path="/help" element={<LazyRoute Component={HelpPage} />} />
           <Route path="/profile" element={<LazyRoute Component={ProfilePage} />} />
         </Route>
         <Route path="*" element={<Navigate to="/events" replace />} />

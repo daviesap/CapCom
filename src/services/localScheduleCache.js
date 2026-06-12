@@ -12,6 +12,7 @@ const emptyCache = {
   filteredViewsByEventId: {},
   keyInfoByEventId: {},
   companiesByClientId: {},
+  helpItems: [],
   updatedAtByScope: {},
 };
 
@@ -31,6 +32,7 @@ function normaliseCache(parsedCache = {}) {
     filteredViewsByEventId: parsedCache.filteredViewsByEventId || {},
     keyInfoByEventId: parsedCache.keyInfoByEventId || {},
     companiesByClientId: parsedCache.companiesByClientId || {},
+    helpItems: parsedCache.helpItems || [],
     updatedAtByScope: parsedCache.updatedAtByScope || {},
   };
 }
@@ -195,6 +197,17 @@ export function cacheCompanies(clientId, companies) {
 
 export function getCachedCompanies(clientId) {
   return readCache().companiesByClientId[clientId] || [];
+}
+
+export function cacheHelpItems(helpItems) {
+  const cache = readCache();
+  cache.helpItems = helpItems;
+  touch(cache, "helpItems");
+  writeCache(cache);
+}
+
+export function getCachedHelpItems() {
+  return readCache().helpItems || [];
 }
 
 export function getScheduleLastUpdated(eventId) {

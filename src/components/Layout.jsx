@@ -8,6 +8,7 @@ import { CapcomIcon } from "../icons/capcomIcons.jsx";
 function getPageTitle(pathname) {
   if (pathname === "/companies") return "Companies";
   if (pathname === "/admin") return "Admin";
+  if (pathname === "/help") return "Help";
   if (pathname === "/profile") return "Profile";
   if (pathname.includes("/days/") && pathname.endsWith("/details")) return "Schedule Details";
   if (pathname.endsWith("/days")) return "Schedule Days";
