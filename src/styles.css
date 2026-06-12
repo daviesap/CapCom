@@ -1316,10 +1316,6 @@ textarea {
   display: none;
 }
 
-.help-category-heading > span:first-child {
-  min-width: 0;
-}
-
 .help-category-heading svg {
   color: var(--color-text-subtle);
   flex: 0 0 auto;
@@ -1332,6 +1328,17 @@ textarea {
 
 .help-category[open] .help-category-heading svg {
   transform: rotate(90deg);
+}
+
+.help-category-title {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.help-category-title > span:first-child {
+  min-width: 0;
 }
 
 .help-category-count {

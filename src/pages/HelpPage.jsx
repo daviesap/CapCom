@@ -186,7 +186,6 @@ export default function HelpPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Help</h1>
-          <p className="page-subtitle">Reference information and answers for using CapCom.</p>
         </div>
         {canManageHelp ? (
           <button
@@ -196,7 +195,7 @@ export default function HelpPage() {
             onClick={startAddingHelpItem}
           >
             <CapcomIcon name="add" size={18} weight="bold" />
-            <span className="button-label">Add Help Item</span>
+            <span className="button-label">Add</span>
           </button>
         ) : null}
       </div>
@@ -245,9 +244,11 @@ export default function HelpPage() {
             {categoryNames.map((category) => (
               <details className="help-category" key={category} open>
                 <summary className="help-category-heading">
-                  <span>{category}</span>
-                  <span className="help-category-count">
-                    {groupedHelpItems[category].length}
+                  <span className="help-category-title">
+                    <span>{category}</span>
+                    <span className="help-category-count">
+                      {groupedHelpItems[category].length}
+                    </span>
                   </span>
                   <CapcomIcon name="caretRight" size={18} weight="bold" />
                 </summary>
