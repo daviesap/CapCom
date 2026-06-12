@@ -25,7 +25,7 @@ jobs:
       # 2. Extract recent changes (e.g., what changed in the last 7 days)
       - name: Get Weekly Git Diff
         run: |
-          git diff $(git rev-list -n 1 --before="7 days ago" main || git rev-list --max-parents=0 HEAD) HEAD > weekly_changes.diff
+          git diff $(git rev-list --max-parents=0 HEAD) HEAD > weekly_changes.diff
 
       # 3. Setup Python to run the AI script
       - name: Set up Python
