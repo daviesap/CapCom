@@ -1,22 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../Modal.jsx";
 import DetailRowActions from "./DetailRowActions.jsx";
-
-function createDetailDragPreview(rowElement) {
-  if (!rowElement || !document.body) return null;
-
-  const rowRect = rowElement.getBoundingClientRect();
-  const preview = rowElement.cloneNode(true);
-  preview.classList.add("detail-drag-preview");
-  preview.style.width = `${rowRect.width}px`;
-
-  preview
-    .querySelectorAll(".notes-popover-panel, .action-menu-list, .company-dropdown-menu")
-    .forEach((element) => element.remove());
-
-  document.body.appendChild(preview);
-  return preview;
-}
 
 export default function DetailRow({
   day,
@@ -62,8 +46,6 @@ export default function DetailRow({
   } = rowEditing;
   const {
     getAdjacentDay,
-    draggedDetailIdRef,
-    reorderDetail,
     moveDetailToDay,
   } = rowOrdering;
   const {
@@ -137,11 +119,8 @@ export default function DetailRow({
     mobileLocationLabel ? ["Location", mobileLocationLabel] : null,
     previewCompanyNames ? ["Company", previewCompanyNames] : null,
   ].filter(Boolean);
-  const dragPreviewRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [previewDescription, setPreviewDescription] = useState("");
-  const canDragRow =
-    !isMobileView && !isEditingTime && !isEditingDescription && !isOffline;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 700px)");
@@ -155,61 +134,11 @@ export default function DetailRow({
     };
   }, []);
 
-  const clearDragPreview = () => {
-    dragPreviewRef.current?.remove();
-    dragPreviewRef.current = null;
-  };
-
   return (
     <>
       <div
-        className="detail-row draggable-row"
+        className="detail-row"
         style={rowStyle}
-        draggable={canDragRow}
-        onDragStart={(event) => {
-          if (!canDragRow) {
-            event.preventDefault();
-            return;
-          }
-          draggedDetailIdRef.current = detail.id;
-          event.dataTransfer.effectAllowed = "move";
-          clearDragPreview();
-          const dragPreview = createDetailDragPreview(event.currentTarget);
-          if (dragPreview) {
-            const rowRect = event.currentTarget.getBoundingClientRect();
-            dragPreviewRef.current = dragPreview;
-            if (event.dataTransfer.setDragImage) {
-              event.dataTransfer.setDragImage(
-                dragPreview,
-                Math.max(0, Math.min(event.clientX - rowRect.left, dragPreview.offsetWidth)),
-                Math.max(0, Math.min(event.clientY - rowRect.top, dragPreview.offsetHeight))
-              );
-            }
-          }
-        }}
-        onDragOver={(event) => {
-          const draggedDetail = dayDetails.find(
-            (nextDetail) => nextDetail.id === draggedDetailIdRef.current
-          );
-          if (
-            draggedDetail &&
-            draggedDetail.id !== detail.id &&
-            (draggedDetail.time || "") === (detail.time || "")
-          ) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-          }
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          reorderDetail(day.id, draggedDetailIdRef.current, detail.id);
-          draggedDetailIdRef.current = "";
-          clearDragPreview();
-        }}
-        onDragEnd={() => {
-          draggedDetailIdRef.current = "";
-          clearDragPreview();
-        }}
       >
       {isEditingTime ? (
         <input

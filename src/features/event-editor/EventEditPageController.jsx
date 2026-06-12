@@ -718,9 +718,6 @@ export default function EventEditPage() {
     saveDetailCell,
     handleDetailCellKeyDown,
     deleteDetail,
-    reorderDetail,
-    moveDetail,
-    canMoveDetail,
     getAdjacentDay,
     getNextSortOrder,
     moveDetailToDay,
@@ -981,7 +978,6 @@ export default function EventEditPage() {
           addDraftDetail={addDraftDetail}
           startEditingDay={startEditingDay}
           isEditingDetailCell={isEditingDetailCell}
-          canMoveDetail={canMoveDetail}
           getAdjacentDay={getAdjacentDay}
           getDetailRowStyle={getDetailRowStyle}
           getTruckDetailRowStyle={getDetailTruckDetailRowStyle}
@@ -989,8 +985,6 @@ export default function EventEditPage() {
           getTagById={getTagById}
           truckById={truckById}
           companyById={companyById}
-          draggedDetailIdRef={draggedDetailIdRef}
-          reorderDetail={reorderDetail}
           detailCellInputRef={detailCellInputRef}
           suppressDetailBlurRef={suppressDetailBlurRef}
           saveDetailCell={saveDetailCell}
@@ -1025,8 +1019,6 @@ export default function EventEditPage() {
           setOpenActionMenuId={setOpenActionMenuId}
           beginRowAction={beginRowAction}
           endRowAction={endRowAction}
-          reorderingDayId={reorderingDayId}
-          moveDetail={moveDetail}
           moveDetailToDay={moveDetailToDay}
           duplicateDetail={duplicateDetail}
           startEditingDetail={startEditingDetail}

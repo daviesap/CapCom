@@ -2,7 +2,6 @@ import {
   createScheduleDetail,
   deleteScheduleDetail,
   updateScheduleDetail,
-  updateScheduleDetailOrder,
 } from "../../services/scheduleDetailService.js";
 import { createTag } from "../../services/tagService.js";
 import { emptyTagForm } from "./eventEditorConstants.js";
@@ -40,8 +39,6 @@ export default function useScheduleDetailPersistence({
   savingDetailId,
   setSavingDetailId,
   setSavingDraftDayId,
-  reorderingDayId,
-  setReorderingDayId,
   removeDraftDetail,
   loadScheduleDetails,
   parseTruckDestinationValue,
@@ -554,80 +551,6 @@ export default function useScheduleDetailPersistence({
     }
   };
 
-  const persistDetailOrder = async (dayId, nextDetails) => {
-    if (isWriteDisabled) {
-      setError("Editing is disabled while offline.");
-      return;
-    }
-    const orderedDetails = nextDetails.map((detail, detailIndex) => ({
-      ...detail,
-      sortOrder: detailIndex,
-    }));
-    const changedDetails = orderedDetails.filter((detail, detailIndex) =>
-      detail.sortOrder !== nextDetails[detailIndex]?.sortOrder
-    );
-
-    setDayDetails(dayId, orderedDetails);
-    setReorderingDayId(dayId);
-    setError("");
-
-    try {
-      await updateScheduleDetailOrder(changedDetails);
-    } catch (reorderError) {
-      console.error(reorderError);
-      setError("Could not reorder schedule details.");
-      await loadScheduleDetails(scheduleDays);
-    } finally {
-      setReorderingDayId("");
-    }
-  };
-
-  const reorderDetail = async (dayId, detailId, targetDetailId) => {
-    if (!targetDetailId || detailId === targetDetailId || reorderingDayId) return;
-
-    const currentDetails = detailsByDayId[dayId] || [];
-    const fromIndex = currentDetails.findIndex((detail) => detail.id === detailId);
-    const toIndex = currentDetails.findIndex((detail) => detail.id === targetDetailId);
-    if (fromIndex < 0 || toIndex < 0) return;
-
-    const detail = currentDetails[fromIndex];
-    const targetDetail = currentDetails[toIndex];
-    if ((detail.time || "") !== (targetDetail.time || "")) return;
-
-    const nextDetails = [...currentDetails];
-    const [movedDetail] = nextDetails.splice(fromIndex, 1);
-    const adjustedToIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
-    nextDetails.splice(adjustedToIndex, 0, movedDetail);
-    await persistDetailOrder(dayId, nextDetails);
-  };
-
-  const moveDetail = async (dayId, detailId, direction) => {
-    if (reorderingDayId) return;
-
-    const currentDetails = detailsByDayId[dayId] || [];
-    const detailIndex = currentDetails.findIndex((detail) => detail.id === detailId);
-    const targetIndex = detailIndex + direction;
-    if (detailIndex < 0 || targetIndex < 0 || targetIndex >= currentDetails.length) return;
-
-    const detail = currentDetails[detailIndex];
-    const targetDetail = currentDetails[targetIndex];
-    if ((detail.time || "") !== (targetDetail.time || "")) return;
-
-    const nextDetails = [...currentDetails];
-    [nextDetails[detailIndex], nextDetails[targetIndex]] = [
-      nextDetails[targetIndex],
-      nextDetails[detailIndex],
-    ];
-    closeActionMenu();
-    await persistDetailOrder(dayId, nextDetails);
-  };
-
-  const canMoveDetail = (dayDetails, detailIndex, direction) => {
-    const targetDetail = dayDetails[detailIndex + direction];
-    if (!targetDetail) return false;
-    return (dayDetails[detailIndex]?.time || "") === (targetDetail.time || "");
-  };
-
   const getAdjacentDay = (dayId, direction) => {
     const dayIndex = scheduleDays.findIndex((day) => day.id === dayId);
     if (dayIndex < 0) return null;
@@ -825,9 +748,6 @@ export default function useScheduleDetailPersistence({
     saveDetailCell,
     handleDetailCellKeyDown,
     deleteDetail,
-    reorderDetail,
-    moveDetail,
-    canMoveDetail,
     getAdjacentDay,
     getNextSortOrder,
     moveDetailToDay,

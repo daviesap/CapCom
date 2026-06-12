@@ -15,13 +15,10 @@ export default function DetailPanel({
   addDraftDetail,
   startEditingDay,
   isEditingDetailCell,
-  canMoveDetail,
   getAdjacentDay,
   getDetailRowStyle,
   getRowTagStyle,
   getTagById,
-  draggedDetailIdRef,
-  reorderDetail,
   detailCellInputRef,
   suppressDetailBlurRef,
   saveDetailCell,
@@ -59,8 +56,6 @@ export default function DetailPanel({
   setOpenActionMenuId,
   beginRowAction,
   endRowAction,
-  reorderingDayId,
-  moveDetail,
   moveDetailToDay,
   duplicateDetail,
   startEditingDetail,
@@ -115,12 +110,7 @@ export default function DetailPanel({
     startEditingDetailCell,
   };
   const rowOrdering = {
-    canMoveDetail,
     getAdjacentDay,
-    draggedDetailIdRef,
-    reorderDetail,
-    reorderingDayId,
-    moveDetail,
     moveDetailToDay,
   };
   const rowAssignments = {
