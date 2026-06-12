@@ -1,0 +1,90 @@
+name: Weekly AI Security Audit
+
+on:
+  schedule:
+    # Runs every Monday at 9:00 AM UTC (Adjust as needed)
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allows you to trigger it manually anytime via the UI
+
+# CRITICAL: Force strict read-only permissions
+permissions:
+  contents: read      # The AI can read the code, but CANNOT write/alter it
+  issues: write       # Allows the agent to open an Issue to send you the report
+
+jobs:
+  ai-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pull down the repository code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history so the AI can scan changes
+
+      # 2. Extract recent changes (e.g., what changed in the last 7 days)
+      - name: Get Weekly Git Diff
+        run: |
+          git diff $(git rev-list -n 1 --before="7 days ago" main || git rev-list --max-parents=0 HEAD) HEAD > weekly_changes.diff
+
+      # 3. Setup Python to run the AI script
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 4. Install OpenAI / Anthropic or SDK of choice
+      - name: Install Dependencies
+        run: pip install openai
+
+      # 5. Run the AI Agent Scan (Generates a report file)
+      - name: Run AI Audit Agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cat << 'EOF' > ai_agent.py
+          import os
+          from openai import OpenAI
+
+          client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+          # Read the code diff and core structure
+          with open("weekly_changes.diff", "r") as f:
+              diff_content = f.read()[:100000] # Cap it to fit context windows nicely
+
+          prompt = f"""
+          You are an elite AppSec AI Agent. Analyze the following weekly code changes for:
+          1. Security vulnerabilities (OWASP Top 10, leaked secrets, SQLi, XSS).
+          2. Highlight significant structural changes.
+          
+          Provide a clean Markdown report with severity levels (Critical, High, Medium, Low).
+          DO NOT suggest any code rewrites directly to files; just provide the text report.
+
+          Weekly Diff:
+          {diff_content}
+          """
+
+          response = client.chat.completions.create(
+              model="gpt-4o", # Or codex/applicable model
+              messages=[{"role": "user", "content": prompt}]
+          )
+
+          with open("ai_report.md", "w") as report_file:
+              report_file.write(response.choices[0].message.content)
+          EOF
+          python ai_agent.py
+
+      # 6. Send the Report (Creates a GitHub Issue flagged just for you)
+      - name: Deliver Weekly Report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('ai_report.md', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly AI Security & Change Report 🛡️`,
+              body: report,
+              labels: ['security', 'ai-audit']
+            });
