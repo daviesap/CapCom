@@ -125,7 +125,7 @@
   --line-height-copy: 1.35;
 
   /* Layout */
-  --page-max-width: 1120px;
+  --page-max-width: 1500px;
   --page-padding-mobile-x: var(--space-6);
   --page-padding-mobile-y: var(--space-9);
   --page-padding-desktop-x: var(--space-12);
