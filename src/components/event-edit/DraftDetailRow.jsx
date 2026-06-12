@@ -7,6 +7,7 @@ export default function DraftDetailRow({
   draftIndex,
   shouldFocusTime,
   isOffline,
+  isLocked = false,
   detailDisplay,
   rowAssignments,
   draftActions,
@@ -36,9 +37,9 @@ export default function DraftDetailRow({
   } = draftActions;
 
   useEffect(() => {
-    if (!shouldFocusTime || isOffline) return;
+    if (!shouldFocusTime || isOffline || isLocked) return;
     timeInputRef.current?.focus({ preventScroll: true });
-  }, [isOffline, shouldFocusTime]);
+  }, [isOffline, isLocked, shouldFocusTime]);
 
   const handleDraftKeyDown = (event) => {
     if (event.key === "Escape") {
@@ -56,24 +57,36 @@ export default function DraftDetailRow({
   const canSaveDraft =
     Boolean(draft.description.trim()) &&
     savingDraftDayId !== dayId &&
-    !isOffline;
+    !isOffline &&
+    !isLocked;
   const selectableTag = tags.some((tag) => tag.id === draft.tagId)
     ? getTagById(draft.tagId)
     : null;
+  const rowStyle = getDetailRowStyle();
+  const effectiveRowStyle = isLocked
+    ? {
+        ...rowStyle,
+        "--detail-row-columns": `32px ${rowStyle["--detail-row-columns"]}`,
+        "--detail-actions-column": Number(rowStyle["--detail-actions-column"] || 6) + 1,
+      }
+    : rowStyle;
 
   return (
     <div
-      className="detail-row draft-row"
+      className={["detail-row", "draft-row", isLocked ? "detail-row-sort-mode" : ""]
+        .filter(Boolean)
+        .join(" ")}
       key={`draft-${draftIndex}`}
-      style={getDetailRowStyle()}
+      style={effectiveRowStyle}
     >
+      {isLocked ? <span className="detail-sort-handle-spacer" aria-hidden="true" /> : null}
       <input
         ref={timeInputRef}
         className="plain-input"
         aria-label="New detail time"
         type="time"
         value={draft.time}
-        disabled={isOffline}
+        disabled={isOffline || isLocked}
         onChange={(event) => updateDraftDetail(dayId, draftIndex, "time", event.target.value)}
         onKeyDown={handleDraftKeyDown}
       />
@@ -82,7 +95,7 @@ export default function DraftDetailRow({
         ref={descriptionInputRef}
         aria-label="New detail description"
         value={draft.description}
-        disabled={isOffline}
+        disabled={isOffline || isLocked}
         onChange={(event) =>
           updateDraftDetail(dayId, draftIndex, "description", event.target.value)
         }
@@ -105,7 +118,7 @@ export default function DraftDetailRow({
           <select
             aria-label="New detail tag"
             value={selectableTag ? draft.tagId : ""}
-            disabled={isOffline}
+            disabled={isOffline || isLocked}
             onChange={(event) => updateDraftDetail(dayId, draftIndex, "tagId", event.target.value)}
           >
             <option value="">No tag</option>
@@ -122,7 +135,7 @@ export default function DraftDetailRow({
           <select
             aria-label="New detail location"
             value={getLocationById(draft.locationId) ? draft.locationId : ""}
-            disabled={isOffline}
+            disabled={isOffline || isLocked}
             onChange={(event) =>
               updateDraftDetail(dayId, draftIndex, "locationId", event.target.value)
             }
@@ -150,7 +163,7 @@ export default function DraftDetailRow({
                 <input
                   type="checkbox"
                   checked={(draft.companyIds || []).includes(company.id)}
-                  disabled={isOffline}
+                  disabled={isOffline || isLocked}
                   onChange={() =>
                     updateDraftDetail(
                       dayId,
@@ -170,7 +183,7 @@ export default function DraftDetailRow({
         <button
           className="button secondary"
           type="button"
-          disabled={isOffline}
+          disabled={isOffline || isLocked}
           onClick={() => removeDraftDetail(dayId, draftIndex)}
         >
           <CapcomIcon name="close" size={16} />

@@ -1,4 +1,5 @@
 import Modal from "../Modal.jsx";
+import { DEFAULT_EVENT_IMAGE_URL } from "../../constants/eventImages.js";
 import { CapcomIcon } from "../../icons/capcomIcons.jsx";
 
 export default function EventEditorHeader({
@@ -27,19 +28,18 @@ export default function EventEditorHeader({
 }) {
   const scheduleDateFieldsDisabled = isOffline || (hasScheduleDays && !isEditingScheduleRange);
   const showScheduleDateFields = !hasScheduleDays || isEditingScheduleRange;
+  const displayImageUrl = imageUrl || DEFAULT_EVENT_IMAGE_URL;
 
   return (
     <section className={showSummary ? "event-edit-header" : "event-edit-header event-edit-header-modal-only"}>
       {showSummary ? (
         <div className="event-edit-header-summary">
           <div className="event-edit-header-main">
-            {imageUrl ? (
-              <img
-                className="event-header-image"
-                src={imageUrl}
-                alt=""
-              />
-            ) : null}
+            <img
+              className="event-header-image"
+              src={displayImageUrl}
+              alt=""
+            />
             <div>
               <h1 className="event-edit-title">{form.name || eventId}</h1>
               {form.venue ? (

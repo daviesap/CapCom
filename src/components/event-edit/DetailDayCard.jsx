@@ -21,6 +21,7 @@ function DetailFilterNotice({ hiddenDetailCount, isEmpty }) {
 export default function DetailDayCard({
   day,
   dayDetails,
+  allDayDetails,
   allDayDetailCount,
   draftDetails,
   detailDisplay,
@@ -31,6 +32,7 @@ export default function DetailDayCard({
   rowNotes,
   rowActions,
   draftActions,
+  isScheduleSortMode,
   isCollapsed,
   onExpand,
   onToggleCollapsed,
@@ -42,7 +44,13 @@ export default function DetailDayCard({
   const detailListId = `detail-day-${day.id}-rows`;
 
   return (
-    <article className={["list-item", isCollapsed ? "day-card-collapsed" : ""].filter(Boolean).join(" ")}>
+    <article
+      className={[
+        "list-item",
+        isCollapsed ? "day-card-collapsed" : "",
+        isScheduleSortMode ? "schedule-sort-locked-card" : "",
+      ].filter(Boolean).join(" ")}
+    >
       <div className="day-card-content">
         <div className="day-heading">
           <div>
@@ -73,7 +81,7 @@ export default function DetailDayCard({
             <button
               className="compact-button primary-soft icon-text-button"
               type="button"
-              disabled={isOffline}
+              disabled={isOffline || isScheduleSortMode}
               onClick={() => {
                 onExpand();
                 addDraftDetail(day.id);
@@ -85,7 +93,7 @@ export default function DetailDayCard({
             <button
               className="compact-button icon-text-button"
               type="button"
-              disabled={isOffline}
+              disabled={isOffline || isScheduleSortMode}
               onClick={() => startEditingDay(day, "overlay")}
             >
               <CapcomIcon name="edit" size={16} />
@@ -111,6 +119,7 @@ export default function DetailDayCard({
                     detail={detail}
                     detailIndex={detailIndex}
                     dayDetails={dayDetails}
+                    sortScopeDetails={allDayDetails}
                     isOffline={isOffline}
                     detailDisplay={detailDisplay}
                     rowEditing={rowEditing}
@@ -128,6 +137,7 @@ export default function DetailDayCard({
                     draftIndex={draftIndex}
                     shouldFocusTime={draftIndex === 0}
                     isOffline={isOffline}
+                    isLocked={isScheduleSortMode}
                     detailDisplay={detailDisplay}
                     rowAssignments={rowAssignments}
                     draftActions={draftActions}

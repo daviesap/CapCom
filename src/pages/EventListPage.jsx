@@ -5,6 +5,7 @@ import { canCreateEvents } from "../auth/roles.js";
 import EmptyState from "../components/EmptyState.jsx";
 import Loading from "../components/Loading.jsx";
 import Modal from "../components/Modal.jsx";
+import { DEFAULT_EVENT_IMAGE_URL } from "../constants/eventImages.js";
 import { CapcomIcon } from "../icons/capcomIcons.jsx";
 import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import { createEvent, getCachedEventsForUser, getEvents } from "../services/eventService.js";
@@ -275,13 +276,11 @@ export default function EventListPage() {
           return (
             <Link className="list-item event-card-link" key={event.id} to={`/events/${event.id}/edit`}>
               <div className="event-card-main">
-                {event.imageUrl ? (
-                  <img
-                    className="event-card-image"
-                    src={event.imageUrl}
-                    alt=""
-                  />
-                ) : null}
+                <img
+                  className="event-card-image"
+                  src={event.imageUrl || DEFAULT_EVENT_IMAGE_URL}
+                  alt=""
+                />
                 <div className="event-card-copy">
                   <p className="item-title">{event.name}</p>
                   {eventMetaLine ? <p className="event-card-meta">{eventMetaLine}</p> : null}

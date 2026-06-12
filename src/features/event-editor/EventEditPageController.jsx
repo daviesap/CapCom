@@ -112,6 +112,7 @@ export default function EventEditPage() {
   const [activeSettingsTab, setActiveSettingsTab] = useState("tags");
   const [collapsedScheduleDayIds, setCollapsedScheduleDayIds] = useState(() => new Set());
   const [showHistoricalEntries, setShowHistoricalEntries] = useState(false);
+  const [sortRowsEnabled, setSortRowsEnabled] = useState(false);
   const draggedLocationIdRef = useRef("");
   const canManageCompanyContacts = !isEventReadOnly && (isSuperAdmin || isAdmin);
   const canManageFilteredViews = !isEventReadOnly && (isSuperAdmin || isAdmin || isUser);
@@ -746,6 +747,12 @@ export default function EventEditPage() {
     toggleCompanyIds,
   });
 
+  useEffect(() => {
+    if (hasActiveScheduleFilters && sortRowsEnabled) {
+      setSortRowsEnabled(false);
+    }
+  }, [hasActiveScheduleFilters, sortRowsEnabled]);
+
   const {
     tagForm,
     locationForm,
@@ -828,6 +835,7 @@ export default function EventEditPage() {
     getNextSortOrder,
     moveDetailToDay,
     duplicateDetail,
+    persistScheduleDetailOrder,
     saveDraftDetail,
     saveMobileAddDetailForm,
     ensureTruckTag,
@@ -920,6 +928,10 @@ export default function EventEditPage() {
   });
 
   if (loading) return <Loading />;
+
+  const canSortScheduleRows =
+    !isWriteDisabled && visibleScheduleDays.length > 0 && !hasActiveScheduleFilters;
+  const isScheduleSortMode = sortRowsEnabled && canSortScheduleRows;
 
   const editingDetailDay = editingDetailModal
     ? scheduleDays.find((day) => day.id === editingDetailModal.dayId)
@@ -1050,6 +1062,14 @@ export default function EventEditPage() {
           dateGroupControlLabel={dateGroupControlLabel}
           hasDateGroups={scheduleDayIds.length > 0}
           onToggleDateGroups={toggleAllScheduleDayGroups}
+          sortRowsEnabled={sortRowsEnabled && canSortScheduleRows}
+          onToggleSortRows={setSortRowsEnabled}
+          canSortRows={canSortScheduleRows}
+          sortRowsDisabledLabel={
+            hasActiveScheduleFilters
+              ? "Clear schedule filters to sort rows"
+              : "Allow row sorting"
+          }
           historicalEntriesControlLabel={historicalEntriesControlLabel}
           hasHistoricalEntries={hasHistoricalScheduleDays}
           onToggleHistoricalEntries={toggleHistoricalEntries}
@@ -1132,6 +1152,10 @@ export default function EventEditPage() {
           notesDraft={notesDraft}
           setNotesDraft={setNotesDraft}
           saveDetailNotes={saveDetailNotes}
+          isScheduleSortMode={isScheduleSortMode}
+          draggedDetailIdRef={draggedDetailIdRef}
+          reorderingDayId={reorderingDayId}
+          persistScheduleDetailOrder={persistScheduleDetailOrder}
           openActionMenuId={openActionMenuId}
           setOpenActionMenuId={setOpenActionMenuId}
           beginRowAction={beginRowAction}

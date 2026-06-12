@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
-import { CapcomIcon } from "../icons/capcomIcons.jsx";
+import { CapcomIcon, getNavIconWeight } from "../icons/capcomIcons.jsx";
 
 const navItems = [
   { to: "/events", label: "Events", icon: "event" },
@@ -30,7 +30,7 @@ export default function AppNav({ variant, collapsed = false }) {
           to={item.to}
           title={collapsed ? item.label : undefined}
         >
-          <CapcomIcon name={item.icon} size={22} weight="duotone" />
+          <CapcomIcon name={item.icon} size={22} weight={getNavIconWeight(item.icon)} />
           <span>{item.label}</span>
         </NavLink>
       ))}

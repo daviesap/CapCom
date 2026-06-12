@@ -19,6 +19,7 @@ import {
   CalendarDots,
   CloudLightning,
   Copy,
+  DotsSix,
   DotsThree,
   FunnelSimple,
   Factory,
@@ -96,6 +97,7 @@ export const capcomIcons = {
   tag: Tag,
   duplicate: Copy,
   delete: Trash,
+  drag: DotsSix,
   company: Factory,
   taskList: ListChecks,
   truck: Truck,
@@ -104,6 +106,16 @@ export const capcomIcons = {
   users: Users,
   warning: Warning,
 };
+
+const defaultNavIconWeight = "duotone";
+
+const navIconWeightOverrides = {
+  question: "regular",
+};
+
+export function getNavIconWeight(name) {
+  return navIconWeightOverrides[name] || defaultNavIconWeight;
+}
 
 export function CapcomIcon({
   name,

@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "../Modal.jsx";
 import DetailRowActions from "./DetailRowActions.jsx";
+import { CapcomIcon } from "../../icons/capcomIcons.jsx";
 
 export default function DetailRow({
   day,
   detail,
   detailIndex,
   dayDetails,
+  sortScopeDetails = dayDetails,
   isOffline,
   detailDisplay,
   rowEditing,
@@ -47,6 +49,10 @@ export default function DetailRow({
   const {
     getAdjacentDay,
     moveDetailToDay,
+    isScheduleSortMode,
+    draggedDetailIdRef,
+    reorderingDayId,
+    persistScheduleDetailOrder,
   } = rowOrdering;
   const {
     savingDetailId,
@@ -81,6 +87,13 @@ export default function DetailRow({
   const rowStyle = isTruckRow
     ? getTruckDetailRowStyle(getRowTagStyle(getTagById(detail.tagId)))
     : getDetailRowStyle(getRowTagStyle(getTagById(detail.tagId)));
+  const effectiveRowStyle = isScheduleSortMode
+    ? {
+        ...rowStyle,
+        "--detail-row-columns": `32px ${rowStyle["--detail-row-columns"]}`,
+        "--detail-actions-column": Number(rowStyle["--detail-actions-column"] || 6) + 1,
+      }
+    : rowStyle;
   const previousDay = getAdjacentDay(day.id, -1);
   const nextDay = getAdjacentDay(day.id, 1);
   const truck = truckById.get(detail.truckId);
@@ -119,8 +132,25 @@ export default function DetailRow({
     mobileLocationLabel ? ["Location", mobileLocationLabel] : null,
     previewCompanyNames ? ["Company", previewCompanyNames] : null,
   ].filter(Boolean);
+  const rowRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [previewDescription, setPreviewDescription] = useState("");
+  const [isDraggingRow, setIsDraggingRow] = useState(false);
+  const [isDropTargetRow, setIsDropTargetRow] = useState(false);
+  const isRowLocked = isOffline || isScheduleSortMode;
+  const matchingTimeDetails = sortScopeDetails.filter(
+    (nextDetail) => String(nextDetail.time || "") === String(detail.time || "")
+  );
+  const canSortWithinTimeGroup = isScheduleSortMode && matchingTimeDetails.length > 1;
+  const isReorderingThisDay = reorderingDayId === day.id;
+  const getDraggedMatchingDetail = () =>
+    matchingTimeDetails.find(
+      (nextDetail) => nextDetail.id === draggedDetailIdRef.current
+    );
+  const canDropDraggedDetail = () => {
+    const draggedDetail = getDraggedMatchingDetail();
+    return Boolean(draggedDetail && draggedDetail.id !== detail.id);
+  };
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 700px)");
@@ -137,9 +167,79 @@ export default function DetailRow({
   return (
     <>
       <div
-        className="detail-row"
-        style={rowStyle}
+        ref={rowRef}
+        className={[
+          "detail-row",
+          isScheduleSortMode ? "detail-row-sort-mode" : "",
+          canSortWithinTimeGroup ? "detail-row-sortable" : "",
+          isDraggingRow ? "detail-row-dragging" : "",
+          isDropTargetRow ? "detail-row-drop-target" : "",
+        ].filter(Boolean).join(" ")}
+        style={effectiveRowStyle}
+        onDragEnter={(event) => {
+          if (!canSortWithinTimeGroup || !canDropDraggedDetail()) return;
+          event.preventDefault();
+          setIsDropTargetRow(true);
+        }}
+        onDragOver={(event) => {
+          if (!canSortWithinTimeGroup || !canDropDraggedDetail()) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          setIsDropTargetRow(true);
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget)) return;
+          setIsDropTargetRow(false);
+        }}
+        onDrop={(event) => {
+          if (!canSortWithinTimeGroup) return;
+          event.preventDefault();
+          setIsDropTargetRow(false);
+          const draggedDetailId = draggedDetailIdRef.current;
+          draggedDetailIdRef.current = "";
+          if (!draggedDetailId || draggedDetailId === detail.id) return;
+          const fromIndex = matchingTimeDetails.findIndex(
+            (nextDetail) => nextDetail.id === draggedDetailId
+          );
+          const toIndex = matchingTimeDetails.findIndex(
+            (nextDetail) => nextDetail.id === detail.id
+          );
+          if (fromIndex < 0 || toIndex < 0) return;
+          const nextDetails = [...matchingTimeDetails];
+          const [movedDetail] = nextDetails.splice(fromIndex, 1);
+          nextDetails.splice(toIndex, 0, movedDetail);
+          persistScheduleDetailOrder(day.id, nextDetails);
+        }}
       >
+      {isScheduleSortMode ? (
+        canSortWithinTimeGroup ? (
+          <button
+            className="detail-sort-handle"
+            type="button"
+            aria-label={`Reorder ${detail.time || "blank time"} row`}
+            title="Drag to reorder matching time rows"
+            disabled={isReorderingThisDay}
+            draggable={!isReorderingThisDay}
+            onDragStart={(event) => {
+              draggedDetailIdRef.current = detail.id;
+              event.dataTransfer.effectAllowed = "move";
+              if (rowRef.current) {
+                event.dataTransfer.setDragImage(rowRef.current, 18, 18);
+              }
+              setIsDraggingRow(true);
+            }}
+            onDragEnd={() => {
+              draggedDetailIdRef.current = "";
+              setIsDraggingRow(false);
+              setIsDropTargetRow(false);
+            }}
+          >
+            <CapcomIcon name="drag" size={17} weight="bold" />
+          </button>
+        ) : (
+          <span className="detail-sort-handle-spacer" aria-hidden="true" />
+        )
+      ) : null}
       {isEditingTime ? (
         <input
           ref={detailCellInputRef}
@@ -147,7 +247,7 @@ export default function DetailRow({
           aria-label={`Time for ${detail.description || "schedule detail"}`}
           type="time"
           value={detail.time || ""}
-          disabled={isOffline}
+          disabled={isRowLocked}
           onBlur={() => {
             if (suppressDetailBlurRef.current) return;
             saveDetailCell(day.id, detail);
@@ -166,7 +266,7 @@ export default function DetailRow({
             )
           }
         />
-      ) : isOffline ? (
+      ) : isRowLocked ? (
         <span className="detail-cell detail-time-display">
           {detail.time || "tbc"}
         </span>
@@ -174,7 +274,7 @@ export default function DetailRow({
         <button
           className="detail-cell detail-time-display"
           type="button"
-          disabled={isOffline}
+          disabled={isRowLocked}
           onClick={() =>
             isMobileView
               ? startEditingDetailTime(day.id, detail)
@@ -185,7 +285,7 @@ export default function DetailRow({
         </button>
       )}
       {isTruckRow ? (
-        isOffline ? (
+        isRowLocked ? (
           <span className="detail-cell detail-description-cell">
             <span className="detail-description-text">{truckSummary}</span>
           </span>
@@ -193,7 +293,7 @@ export default function DetailRow({
         <button
           className="detail-cell detail-description-cell"
           type="button"
-          disabled={isOffline}
+          disabled={isRowLocked}
         >
           <span className="detail-description-text">{truckSummary}</span>
         </button>
@@ -204,7 +304,7 @@ export default function DetailRow({
           className="plain-input"
           aria-label={`Description for ${detail.time || "tbc"}`}
           value={detail.description || ""}
-          disabled={isOffline}
+          disabled={isRowLocked}
           onBlur={() => {
             if (suppressDetailBlurRef.current) return;
             saveDetailCell(day.id, detail);
@@ -223,7 +323,7 @@ export default function DetailRow({
             )
           }
         />
-      ) : isOffline ? (
+      ) : isRowLocked ? (
         <span
           className="detail-cell detail-description-cell"
           data-tooltip={detail.description || ""}
@@ -235,7 +335,7 @@ export default function DetailRow({
           className="detail-cell detail-description-cell"
           type="button"
           data-tooltip={detail.description || ""}
-          disabled={isOffline}
+          disabled={isRowLocked}
           onClick={() => {
             if (isMobileView) {
               setPreviewDescription(detail.description || "");
@@ -269,7 +369,7 @@ export default function DetailRow({
             <select
               aria-label={`Tag for ${detail.description || "schedule detail"}`}
               value={selectableTag ? detail.tagId : ""}
-              disabled={savingDetailId === detail.id || isOffline || Boolean(detail.truckId)}
+              disabled={savingDetailId === detail.id || isRowLocked || Boolean(detail.truckId)}
               onChange={(event) => assignDetailTag(day.id, detail, event.target.value)}
             >
               <option value="">No tag</option>
@@ -288,7 +388,7 @@ export default function DetailRow({
             <select
               aria-label={`Location for ${detail.description || "schedule detail"}`}
               value={getLocationById(detail.locationId) ? detail.locationId : ""}
-              disabled={savingDetailId === detail.id || isOffline}
+              disabled={savingDetailId === detail.id || isRowLocked}
               onChange={(event) => assignDetailLocation(day.id, detail, event.target.value)}
             >
               <option value="">No location</option>
@@ -316,7 +416,7 @@ export default function DetailRow({
                   <input
                     type="checkbox"
                     checked={(detail.companyIds || []).includes(company.id)}
-                    disabled={savingDetailId === detail.id || isOffline}
+                    disabled={savingDetailId === detail.id || isRowLocked}
                     onChange={() =>
                       assignDetailCompanies(
                         day.id,
@@ -344,7 +444,7 @@ export default function DetailRow({
             <select
               aria-label="Destination for truck detail"
               value={getTruckDestinationValue(detail)}
-              disabled={savingDetailId === detail.id || isOffline}
+              disabled={savingDetailId === detail.id || isRowLocked}
               onChange={(event) =>
                 assignTruckDetailDestination(day.id, detail, event.target.value)
               }
@@ -372,6 +472,7 @@ export default function DetailRow({
           </div>
         </>
       ) : null}
+      {!isScheduleSortMode ? (
       <DetailRowActions
         day={day}
         detail={detail}
@@ -395,6 +496,9 @@ export default function DetailRow({
         closeActionMenu={closeActionMenu}
         deleteDetail={deleteDetail}
       />
+      ) : (
+        <span className="detail-row-actions-placeholder" aria-hidden="true" />
+      )}
       </div>
       {previewDescription ? (
         <Modal

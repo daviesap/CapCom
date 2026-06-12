@@ -2,7 +2,9 @@ import {
   createScheduleDetail,
   deleteScheduleDetail,
   updateScheduleDetail,
+  updateScheduleDetailOrder,
 } from "../../services/scheduleDetailService.js";
+import { cacheScheduleDetails } from "../../services/localScheduleCache.js";
 import { createTag } from "../../services/tagService.js";
 import { emptyTagForm } from "./eventEditorConstants.js";
 import {
@@ -39,6 +41,7 @@ export default function useScheduleDetailPersistence({
   savingDetailId,
   setSavingDetailId,
   setSavingDraftDayId,
+  setReorderingDayId,
   removeDraftDetail,
   loadScheduleDetails,
   parseTruckDestinationValue,
@@ -654,6 +657,68 @@ export default function useScheduleDetailPersistence({
     }
   };
 
+  const persistScheduleDetailOrder = async (dayId, nextGroupDetails) => {
+    if (isWriteDisabled) {
+      setError("Editing is disabled while offline.");
+      return;
+    }
+    if (!dayId || nextGroupDetails.length === 0) return;
+
+    const currentDayDetails = detailsByDayId[dayId] || [];
+    const groupIds = new Set(nextGroupDetails.map((detail) => detail.id));
+    const originalGroupDetails = currentDayDetails.filter((detail) => groupIds.has(detail.id));
+    const orderedDetails = nextGroupDetails.map((detail, detailIndex) => ({
+      ...detail,
+      sortOrder: detailIndex,
+    }));
+    const changedDetails = orderedDetails.filter((detail) => {
+      const originalDetail = originalGroupDetails.find(
+        (currentDetail) => currentDetail.id === detail.id
+      );
+      return originalDetail?.sortOrder !== detail.sortOrder;
+    });
+
+    if (changedDetails.length === 0) return;
+
+    const orderedById = new Map(orderedDetails.map((detail) => [detail.id, detail]));
+    setDayDetails(
+      dayId,
+      sortDetailsForDisplay(
+        currentDayDetails.map((detail) => orderedById.get(detail.id) || detail)
+      )
+    );
+    cacheScheduleDetails(
+      dayId,
+      sortDetailsForDisplay(
+        currentDayDetails.map((detail) => orderedById.get(detail.id) || detail)
+      )
+    );
+    setSavedDetailsById((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        orderedDetails.map((detail) => [
+          detail.id,
+          {
+            ...(current[detail.id] || {}),
+            sortOrder: detail.sortOrder,
+          },
+        ])
+      ),
+    }));
+    setReorderingDayId(dayId);
+    setError("");
+
+    try {
+      await updateScheduleDetailOrder(changedDetails);
+    } catch (reorderError) {
+      console.error(reorderError);
+      setError("Could not reorder schedule rows.");
+      await loadScheduleDetails(scheduleDays);
+    } finally {
+      setReorderingDayId("");
+    }
+  };
+
   const saveDraftDetail = async (dayId, draftIndex, draft) => {
     if (isWriteDisabled) {
       setError("Editing is disabled while offline.");
@@ -752,6 +817,7 @@ export default function useScheduleDetailPersistence({
     getNextSortOrder,
     moveDetailToDay,
     duplicateDetail,
+    persistScheduleDetailOrder,
     saveDraftDetail,
     saveMobileAddDetailForm,
     ensureTruckTag,

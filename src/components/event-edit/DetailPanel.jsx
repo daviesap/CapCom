@@ -55,6 +55,10 @@ export default function DetailPanel({
   notesDraft,
   setNotesDraft,
   saveDetailNotes,
+  isScheduleSortMode = false,
+  draggedDetailIdRef,
+  reorderingDayId,
+  persistScheduleDetailOrder,
   openActionMenuId,
   setOpenActionMenuId,
   beginRowAction,
@@ -118,6 +122,10 @@ export default function DetailPanel({
   const rowOrdering = {
     getAdjacentDay,
     moveDetailToDay,
+    isScheduleSortMode,
+    draggedDetailIdRef,
+    reorderingDayId,
+    persistScheduleDetailOrder,
   };
   const rowAssignments = {
     savingDetailId,
@@ -197,6 +205,7 @@ export default function DetailPanel({
               key={day.id}
               day={day}
               dayDetails={dayDetails}
+              allDayDetails={allDayDetails}
               allDayDetailCount={allDayDetails.length}
               draftDetails={draftDetails}
               detailDisplay={detailDisplay}
@@ -207,6 +216,7 @@ export default function DetailPanel({
               rowNotes={rowNotes}
               rowActions={rowActions}
               draftActions={draftActions}
+              isScheduleSortMode={isScheduleSortMode}
               isCollapsed={collapsedDayIds.has(day.id)}
               onExpand={() => expandDay(day.id)}
               onToggleCollapsed={() => toggleDayCollapsed(day.id)}

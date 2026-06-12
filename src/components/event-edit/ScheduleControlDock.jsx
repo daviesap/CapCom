@@ -22,6 +22,10 @@ export default function ScheduleControlDock({
   dateGroupControlIcon,
   onToggleDateGroups,
   hasDateGroups,
+  sortRowsEnabled,
+  onToggleSortRows,
+  canSortRows,
+  sortRowsDisabledLabel = "Allow row sorting",
   historicalEntriesControlLabel,
   onToggleHistoricalEntries,
   hasHistoricalEntries,
@@ -39,8 +43,16 @@ export default function ScheduleControlDock({
               disabled={!hasDateGroups}
             />
           </div>
-          <label className="schedule-dock-toggle" title="Allow row sorting">
-            <input type="checkbox" />
+          <label
+            className="schedule-dock-toggle"
+            title={canSortRows ? "Allow row sorting" : sortRowsDisabledLabel}
+          >
+            <input
+              type="checkbox"
+              checked={sortRowsEnabled}
+              disabled={!canSortRows}
+              onChange={(event) => onToggleSortRows(event.target.checked)}
+            />
             <span className="schedule-dock-toggle-track" aria-hidden="true">
               <span className="schedule-dock-toggle-thumb" />
             </span>
