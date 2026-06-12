@@ -7,6 +7,7 @@ import EventEditorTabs from "../../components/event-edit/EventEditorTabs.jsx";
 import DetailFilters from "../../components/event-edit/DetailFilters.jsx";
 import DetailPanel from "../../components/event-edit/DetailPanel.jsx";
 import InfoPanel from "../../components/event-edit/InfoPanel.jsx";
+import ScheduleControlDock from "../../components/event-edit/ScheduleControlDock.jsx";
 import SettingsPanel from "../../components/event-edit/SettingsPanel.jsx";
 import SharePanel from "../../components/event-edit/SharePanel.jsx";
 import TruckingPanel from "../../components/event-edit/TruckingPanel.jsx";
@@ -938,32 +939,35 @@ export default function EventEditPage() {
       ) : null}
 
       {activeTab === "detail" ? (
-      <section className="panel">
-        <DetailFilters
-          usedTags={usedTags}
-          usedLocationFilters={usedLocationFilters}
-          usedSubLocationFilters={usedSubLocationFilters}
-          usedCompanies={usedCompanies}
-          detailCountByTagId={detailCountByTagId}
-          detailCountByLocationFilterId={detailCountByLocationFilterId}
-          detailCountBySubLocationId={detailCountBySubLocationId}
-          detailCountByCompanyId={detailCountByCompanyId}
-          hasActiveScheduleFilters={hasActiveScheduleFilters}
-          selectedTagFilterIds={selectedTagFilterIds}
-          selectedLocationFilterIds={selectedLocationFilterIds}
-          selectedSubLocationFilterIds={selectedSubLocationFilterIds}
-          selectedCompanyFilterIds={selectedCompanyFilterIds}
-          normaliseHexColour={normaliseHexColour}
-          clearScheduleFilters={clearScheduleFilters}
-          setSelectedTagFilterIds={setSelectedTagFilterIds}
-          toggleTagFilter={toggleTagFilter}
-          setSelectedLocationFilterIds={setSelectedLocationFilterIds}
-          setSelectedSubLocationFilterIds={setSelectedSubLocationFilterIds}
-          setSelectedCompanyFilterIds={setSelectedCompanyFilterIds}
-          toggleLocationFilter={toggleLocationFilter}
-          toggleSubLocationFilter={toggleSubLocationFilter}
-          toggleCompanyFilter={toggleCompanyFilter}
-        />
+      <>
+        <ScheduleControlDock>
+          <DetailFilters
+            usedTags={usedTags}
+            usedLocationFilters={usedLocationFilters}
+            usedSubLocationFilters={usedSubLocationFilters}
+            usedCompanies={usedCompanies}
+            detailCountByTagId={detailCountByTagId}
+            detailCountByLocationFilterId={detailCountByLocationFilterId}
+            detailCountBySubLocationId={detailCountBySubLocationId}
+            detailCountByCompanyId={detailCountByCompanyId}
+            hasActiveScheduleFilters={hasActiveScheduleFilters}
+            selectedTagFilterIds={selectedTagFilterIds}
+            selectedLocationFilterIds={selectedLocationFilterIds}
+            selectedSubLocationFilterIds={selectedSubLocationFilterIds}
+            selectedCompanyFilterIds={selectedCompanyFilterIds}
+            normaliseHexColour={normaliseHexColour}
+            clearScheduleFilters={clearScheduleFilters}
+            setSelectedTagFilterIds={setSelectedTagFilterIds}
+            toggleTagFilter={toggleTagFilter}
+            setSelectedLocationFilterIds={setSelectedLocationFilterIds}
+            setSelectedSubLocationFilterIds={setSelectedSubLocationFilterIds}
+            setSelectedCompanyFilterIds={setSelectedCompanyFilterIds}
+            toggleLocationFilter={toggleLocationFilter}
+            toggleSubLocationFilter={toggleSubLocationFilter}
+            toggleCompanyFilter={toggleCompanyFilter}
+          />
+        </ScheduleControlDock>
+        <section className="panel schedule-panel">
         <DetailPanel
           scheduleDays={scheduleDays}
           detailsByDayId={detailsByDayId}
@@ -1031,6 +1035,7 @@ export default function EventEditPage() {
           saveDraftDetail={saveDraftDetail}
         />
       </section>
+      </>
       ) : null}
 
       <ScheduleDetailModals

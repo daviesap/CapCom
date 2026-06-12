@@ -674,6 +674,248 @@ summary:focus-visible {
   margin: 0;
 }
 
+.schedule-panel {
+  overflow: visible;
+  position: relative;
+}
+
+.schedule-control-dock-wrap {
+  display: flex;
+  height: auto;
+  justify-content: stretch;
+  margin-bottom: var(--space-4);
+  pointer-events: none;
+  position: sticky;
+  top: calc(var(--app-topbar-event-height-desktop) + var(--space-5));
+  z-index: 38;
+}
+
+.schedule-control-dock {
+  align-items: center;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-divider-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 18px rgba(23, 32, 42, 0.06);
+  display: inline-flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  max-width: none;
+  min-height: 42px;
+  padding: var(--space-1);
+  pointer-events: auto;
+  transform: none;
+  width: 100%;
+}
+
+.schedule-dock-button,
+.schedule-dock-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-mid-muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  white-space: nowrap;
+}
+
+.schedule-dock-button {
+  cursor: default;
+}
+
+.schedule-dock-button:hover,
+.schedule-dock-button:focus-visible,
+.schedule-dock-toggle:hover,
+.schedule-dock-toggle:focus-within {
+  background: var(--color-surface-soft-alt);
+  color: var(--color-text);
+}
+
+.schedule-dock-button:focus-visible,
+.schedule-dock-toggle:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.schedule-dock-icon-button {
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.schedule-dock-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.schedule-dock-filters .filter-menu-bar {
+  border-bottom: 0;
+  margin: 0;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.schedule-dock-filters .filter-menu-trigger {
+  max-width: 220px;
+}
+
+.schedule-dock-filters .filter-menu-clear {
+  flex: 0 0 auto;
+  margin-left: var(--space-2);
+}
+
+.schedule-dock-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.schedule-dock-inline-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.schedule-dock-toggle {
+  cursor: pointer;
+  position: relative;
+}
+
+.schedule-dock-toggle input {
+  clip-path: inset(50%);
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.schedule-dock-toggle-track {
+  align-items: center;
+  background: var(--color-divider-muted);
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 18px;
+  padding: 2px;
+  width: 32px;
+}
+
+.schedule-dock-toggle-thumb {
+  background: var(--color-surface);
+  border-radius: 50%;
+  box-shadow: var(--shadow-switch-thumb);
+  display: block;
+  height: 14px;
+  transform: translateX(0);
+  transition: transform 120ms ease;
+  width: 14px;
+}
+
+.schedule-dock-toggle input:checked + .schedule-dock-toggle-track {
+  background: var(--color-primary);
+}
+
+.schedule-dock-toggle input:checked + .schedule-dock-toggle-track .schedule-dock-toggle-thumb {
+  transform: translateX(14px);
+}
+
+.schedule-dock-menu {
+  position: relative;
+}
+
+.schedule-dock-menu summary {
+  list-style: none;
+}
+
+.schedule-dock-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.schedule-dock-menu-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
+  display: grid;
+  gap: var(--space-1);
+  min-width: 180px;
+  padding: var(--space-2);
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 45;
+}
+
+.schedule-dock-menu-panel .schedule-dock-button {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .schedule-control-dock-wrap {
+    height: auto;
+    margin-bottom: var(--space-5);
+    top: calc(var(--app-topbar-event-height) + var(--space-5));
+  }
+
+  .schedule-control-dock {
+    align-items: stretch;
+    margin-inline: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    transform: none;
+    width: 100%;
+  }
+
+  .schedule-dock-filters .filter-menu-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .schedule-dock-inline-actions {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .schedule-control-dock {
+    gap: var(--space-2);
+  }
+
+  .schedule-dock-filters .filter-menu-trigger {
+    min-width: 92px;
+    padding-inline: var(--space-4);
+  }
+
+  .schedule-dock-button {
+    min-width: var(--touch-target);
+    padding: 0 var(--space-2);
+  }
+
+  .schedule-dock-label {
+    display: none;
+  }
+
+  .schedule-dock-toggle {
+    margin-left: auto;
+  }
+
+  .schedule-dock-toggle-label {
+    font-size: var(--font-size-xs);
+  }
+}
+
 .tabs {
   align-items: center;
   display: inline-flex;
