@@ -25,6 +25,8 @@ export const HELP_TYPE_LABELS = {
   [HELP_ITEM_TYPES.FAQ]: "FAQ",
 };
 
+export const HELP_DEFAULT_CATEGORY = "General";
+
 export const HELP_DEFAULT_FORM = {
   type: HELP_ITEM_TYPES.INFORMATION,
   category: "",
@@ -34,6 +36,17 @@ export const HELP_DEFAULT_FORM = {
 };
 
 const helpItemsRef = collection(db, "helpItems");
+
+export function normaliseHelpCategory(category) {
+  return (
+    String(category || HELP_DEFAULT_CATEGORY).trim().replace(/\s+/g, " ")
+    || HELP_DEFAULT_CATEGORY
+  );
+}
+
+export function getHelpCategoryKey(category) {
+  return normaliseHelpCategory(category).toLocaleLowerCase();
+}
 
 function logWriteError(action, error, context = {}) {
   console.error(`Firestore write failed: ${action}`, { ...context, error });
@@ -47,7 +60,7 @@ function normaliseHelpItem(helpItemData) {
 
   return {
     type,
-    category: String(helpItemData.category || "General").trim() || "General",
+    category: normaliseHelpCategory(helpItemData.category),
     title: String(helpItemData.title || "").trim(),
     detail: String(helpItemData.detail || "").trim(),
     sort: Number.isFinite(sortNumber) ? sortNumber : 0,
@@ -56,8 +69,8 @@ function normaliseHelpItem(helpItemData) {
 
 function sortHelpItems(helpItems) {
   return [...helpItems].sort((a, b) => {
-    const categoryComparison = String(a.category || "General").localeCompare(
-      String(b.category || "General")
+    const categoryComparison = normaliseHelpCategory(a.category).localeCompare(
+      normaliseHelpCategory(b.category)
     );
     if (categoryComparison !== 0) return categoryComparison;
 

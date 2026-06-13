@@ -8,11 +8,14 @@ import useOnlineStatus from "../hooks/useOnlineStatus.js";
 import {
   createHelpItem,
   deleteHelpItem,
+  getHelpCategoryKey,
   getCachedHelpItems,
   getHelpItems,
+  HELP_DEFAULT_CATEGORY,
   HELP_DEFAULT_FORM,
   HELP_ITEM_TYPES,
   HELP_TYPE_LABELS,
+  normaliseHelpCategory,
   updateHelpItem,
 } from "../services/helpService.js";
 
@@ -25,7 +28,7 @@ const HELP_NEW_CATEGORY_VALUE = "__new_help_category__";
 
 function groupHelpItems(helpItems) {
   return helpItems.reduce((groups, helpItem) => {
-    const category = helpItem.category || "General";
+    const category = normaliseHelpCategory(helpItem.category);
     if (!groups[category]) groups[category] = [];
     groups[category].push(helpItem);
     return groups;
@@ -33,17 +36,33 @@ function groupHelpItems(helpItems) {
 }
 
 function getHelpCategoryOptions(helpItems, type, currentCategory) {
-  const categoryOptions = new Set(["General"]);
+  const categoryOptions = new Map([
+    [getHelpCategoryKey(HELP_DEFAULT_CATEGORY), HELP_DEFAULT_CATEGORY],
+  ]);
 
   helpItems.forEach((helpItem) => {
     if (helpItem.type !== type) return;
-    categoryOptions.add(helpItem.category || "General");
+    const category = normaliseHelpCategory(helpItem.category);
+    const categoryKey = getHelpCategoryKey(category);
+    if (!categoryOptions.has(categoryKey)) categoryOptions.set(categoryKey, category);
   });
 
-  if (currentCategory) categoryOptions.add(currentCategory);
+  const normalisedCurrentCategory = normaliseHelpCategory(currentCategory);
+  const currentCategoryKey = getHelpCategoryKey(normalisedCurrentCategory);
+  if (!categoryOptions.has(currentCategoryKey)) {
+    categoryOptions.set(currentCategoryKey, normalisedCurrentCategory);
+  }
 
-  return [...categoryOptions].sort((firstCategory, secondCategory) =>
+  return [...categoryOptions.values()].sort((firstCategory, secondCategory) =>
     firstCategory.localeCompare(secondCategory)
+  );
+}
+
+function getCanonicalHelpCategory(category, categoryOptions) {
+  const categoryKey = getHelpCategoryKey(category);
+  return (
+    categoryOptions.find((categoryOption) => getHelpCategoryKey(categoryOption) === categoryKey)
+    || normaliseHelpCategory(category)
   );
 }
 
@@ -88,7 +107,7 @@ export default function HelpPage() {
   );
   const helpCategorySelectValue = isAddingHelpCategory
     ? HELP_NEW_CATEGORY_VALUE
-    : helpForm.category || "General";
+    : getCanonicalHelpCategory(helpForm.category, helpCategoryOptions);
 
   const loadHelpItems = async ({ showLoading = true } = {}) => {
     setHelpError("");
@@ -179,13 +198,18 @@ export default function HelpPage() {
 
     setSavingHelpItem(true);
     try {
+      const helpItemToSave = {
+        ...helpForm,
+        category: getCanonicalHelpCategory(helpForm.category, helpCategoryOptions),
+      };
+
       if (editingHelpItemId) {
-        await updateHelpItem(editingHelpItemId, helpForm);
+        await updateHelpItem(editingHelpItemId, helpItemToSave);
       } else {
-        await createHelpItem(helpForm);
+        await createHelpItem(helpItemToSave);
       }
 
-      const savedType = helpForm.type;
+      const savedType = helpItemToSave.type;
       resetHelpForm();
       setActiveTab(savedType);
       await loadHelpItems();
