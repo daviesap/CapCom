@@ -10,3 +10,6 @@ firebase-debug.log
 firestore-debug.log
 .firebase
 local_testing
+*.service-account.json
+*serviceAccount*.json
+.gcloud/
