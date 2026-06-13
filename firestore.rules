@@ -343,7 +343,7 @@ service cloud.firestore {
         && (!issue.keys().hasAny(["imagePath"]) || (issue.imagePath is string && issue.imagePath.size() <= 500))
         && (!issue.keys().hasAny(["imageUrl"]) || (issue.imageUrl is string && issue.imageUrl.size() <= 2000))
         && issue.status in ["Open", "Closed"]
-        && issue.type in ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"]
+        && issue.type in ["Major Bug", "Minor Bug", "Friction", "Future"]
         && issue.createdAt is timestamp
         && issue.updatedAt is timestamp
         && (issue.createdBy is string || issue.createdBy == null)

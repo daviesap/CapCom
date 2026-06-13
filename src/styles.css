@@ -1369,23 +1369,6 @@ textarea {
   border-radius: var(--radius-md);
 }
 
-.help-info-card {
-  align-items: flex-start;
-  display: flex;
-  gap: var(--space-6);
-  justify-content: space-between;
-  padding: var(--space-6);
-}
-
-.help-info-copy {
-  min-width: 0;
-}
-
-.help-info-copy h3 {
-  font-size: var(--font-size-md);
-  margin: 0 0 var(--space-2);
-}
-
 .help-item-detail {
   color: var(--color-text-muted);
   line-height: 1.55;
@@ -1402,6 +1385,7 @@ textarea {
   justify-content: flex-end;
 }
 
+.help-info-card summary,
 .help-faq-row summary {
   align-items: center;
   cursor: pointer;
@@ -1413,20 +1397,24 @@ textarea {
   padding: var(--space-6);
 }
 
+.help-info-card summary::-webkit-details-marker,
 .help-faq-row summary::-webkit-details-marker {
   display: none;
 }
 
+.help-info-card summary svg,
 .help-faq-row summary svg {
   color: var(--color-text-subtle);
   flex: 0 0 auto;
   transition: transform 140ms ease;
 }
 
+.help-info-card[open] summary svg,
 .help-faq-row[open] summary svg {
   transform: rotate(90deg);
 }
 
+.help-info-body,
 .help-faq-body {
   border-top: 1px solid var(--color-divider-muted-alt);
   display: grid;

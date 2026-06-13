@@ -15,7 +15,7 @@ import { db } from "../firebase/firestore";
 import { storage } from "../firebase/storage.js";
 
 export const ISSUE_STATUSES = ["Open", "Closed"];
-export const ISSUE_TYPES = ["Major Bug", "Minor Bug", "Friction", "Tweak", "Feature", "Nice Idea"];
+export const ISSUE_TYPES = ["Major Bug", "Minor Bug", "Friction", "Future"];
 
 export const ISSUE_DEFAULTS = {
   title: "",

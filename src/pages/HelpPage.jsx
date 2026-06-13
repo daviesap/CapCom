@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider.jsx";
+import IssuesPanel from "../components/IssuesPanel.jsx";
 import Loading from "../components/Loading.jsx";
 import Modal from "../components/Modal.jsx";
 import { CapcomIcon } from "../icons/capcomIcons.jsx";
@@ -19,6 +20,8 @@ const helpTabs = [
   { type: HELP_ITEM_TYPES.INFORMATION, label: "Information", icon: "info" },
   { type: HELP_ITEM_TYPES.FAQ, label: "FAQ", icon: "question" },
 ];
+const issueTab = { type: "issues", label: "Issues", icon: "warning" };
+const HELP_NEW_CATEGORY_VALUE = "__new_help_category__";
 
 function groupHelpItems(helpItems) {
   return helpItems.reduce((groups, helpItem) => {
@@ -27,6 +30,21 @@ function groupHelpItems(helpItems) {
     groups[category].push(helpItem);
     return groups;
   }, {});
+}
+
+function getHelpCategoryOptions(helpItems, type, currentCategory) {
+  const categoryOptions = new Set(["General"]);
+
+  helpItems.forEach((helpItem) => {
+    if (helpItem.type !== type) return;
+    categoryOptions.add(helpItem.category || "General");
+  });
+
+  if (currentCategory) categoryOptions.add(currentCategory);
+
+  return [...categoryOptions].sort((firstCategory, secondCategory) =>
+    firstCategory.localeCompare(secondCategory)
+  );
 }
 
 function HelpItemDetail({ detail }) {
@@ -44,10 +62,16 @@ export default function HelpPage() {
   const [helpError, setHelpError] = useState("");
   const [helpForm, setHelpForm] = useState(HELP_DEFAULT_FORM);
   const [isHelpFormOpen, setIsHelpFormOpen] = useState(false);
+  const [isAddingHelpCategory, setIsAddingHelpCategory] = useState(false);
   const [editingHelpItemId, setEditingHelpItemId] = useState("");
   const [savingHelpItem, setSavingHelpItem] = useState(false);
   const [deletingHelpItemId, setDeletingHelpItemId] = useState("");
   const canManageHelp = isSuperAdmin;
+  const isIssuesTabActive = activeTab === issueTab.type;
+  const visibleHelpTabs = useMemo(
+    () => canManageHelp ? [...helpTabs, issueTab] : helpTabs,
+    [canManageHelp]
+  );
   const isDeletingCurrentHelpItem = Boolean(
     editingHelpItemId && deletingHelpItemId === editingHelpItemId
   );
@@ -58,6 +82,13 @@ export default function HelpPage() {
   );
   const groupedHelpItems = useMemo(() => groupHelpItems(activeHelpItems), [activeHelpItems]);
   const categoryNames = useMemo(() => Object.keys(groupedHelpItems), [groupedHelpItems]);
+  const helpCategoryOptions = useMemo(
+    () => getHelpCategoryOptions(helpItems, helpForm.type, helpForm.category),
+    [helpForm.category, helpForm.type, helpItems]
+  );
+  const helpCategorySelectValue = isAddingHelpCategory
+    ? HELP_NEW_CATEGORY_VALUE
+    : helpForm.category || "General";
 
   const loadHelpItems = async ({ showLoading = true } = {}) => {
     setHelpError("");
@@ -89,8 +120,20 @@ export default function HelpPage() {
     setHelpForm((current) => ({ ...current, [field]: value }));
   };
 
+  const updateHelpCategorySelection = (value) => {
+    if (value === HELP_NEW_CATEGORY_VALUE) {
+      setIsAddingHelpCategory(true);
+      updateHelpFormField("category", "");
+      return;
+    }
+
+    setIsAddingHelpCategory(false);
+    updateHelpFormField("category", value);
+  };
+
   const resetHelpForm = () => {
     setIsHelpFormOpen(false);
+    setIsAddingHelpCategory(false);
     setEditingHelpItemId("");
     setHelpForm({ ...HELP_DEFAULT_FORM, type: activeTab });
   };
@@ -98,6 +141,7 @@ export default function HelpPage() {
   const startAddingHelpItem = () => {
     setHelpError("");
     setIsHelpFormOpen(true);
+    setIsAddingHelpCategory(false);
     setEditingHelpItemId("");
     setHelpForm({ ...HELP_DEFAULT_FORM, type: activeTab });
   };
@@ -105,6 +149,7 @@ export default function HelpPage() {
   const startEditingHelpItem = (helpItem) => {
     setHelpError("");
     setIsHelpFormOpen(true);
+    setIsAddingHelpCategory(false);
     setEditingHelpItemId(helpItem.id);
     setHelpForm({
       type: helpItem.type || HELP_ITEM_TYPES.INFORMATION,
@@ -187,7 +232,7 @@ export default function HelpPage() {
         <div>
           <h1 className="page-title">Help</h1>
         </div>
-        {canManageHelp ? (
+        {canManageHelp && !isIssuesTabActive ? (
           <button
             className="button"
             type="button"
@@ -206,7 +251,7 @@ export default function HelpPage() {
       {helpError ? <p className="error">{helpError}</p> : null}
 
       <div className="tabs help-tabs" aria-label="Help content tabs">
-        {helpTabs.map((tab) => (
+        {visibleHelpTabs.map((tab) => (
           <button
             className={activeTab === tab.type ? "tab active" : "tab"}
             type="button"
@@ -220,6 +265,9 @@ export default function HelpPage() {
         ))}
       </div>
 
+      {isIssuesTabActive ? (
+        <IssuesPanel />
+      ) : (
       <section className="panel help-panel">
         {helpLoading ? <p className="message">Loading help content...</p> : null}
 
@@ -289,36 +337,39 @@ export default function HelpPage() {
                         </div>
                       </details>
                     ) : (
-                      <article className="help-info-card" key={helpItem.id}>
-                        <div className="help-info-copy">
-                          <h3>{helpItem.title}</h3>
+                      <details className="help-info-card" key={helpItem.id}>
+                        <summary>
+                          <span>{helpItem.title}</span>
+                          <CapcomIcon name="caretRight" size={18} weight="bold" />
+                        </summary>
+                        <div className="help-info-body">
                           <HelpItemDetail detail={helpItem.detail} />
+                          {canManageHelp ? (
+                            <div className="help-item-actions">
+                              <button
+                                className="button secondary"
+                                type="button"
+                                disabled={isOffline || savingHelpItem}
+                                onClick={() => startEditingHelpItem(helpItem)}
+                              >
+                                <CapcomIcon name="edit" size={18} weight="bold" />
+                                <span className="button-label">Edit</span>
+                              </button>
+                              <button
+                                className="button danger"
+                                type="button"
+                                disabled={isOffline || deletingHelpItemId === helpItem.id}
+                                onClick={() => removeHelpItem(helpItem.id)}
+                              >
+                                <CapcomIcon name="delete" size={18} weight="bold" />
+                                <span className="button-label">
+                                  {deletingHelpItemId === helpItem.id ? "Deleting..." : "Delete"}
+                                </span>
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
-                        {canManageHelp ? (
-                          <div className="help-item-actions">
-                            <button
-                              className="button secondary"
-                              type="button"
-                              disabled={isOffline || savingHelpItem}
-                              onClick={() => startEditingHelpItem(helpItem)}
-                            >
-                              <CapcomIcon name="edit" size={18} weight="bold" />
-                              <span className="button-label">Edit</span>
-                            </button>
-                            <button
-                              className="button danger"
-                              type="button"
-                              disabled={isOffline || deletingHelpItemId === helpItem.id}
-                              onClick={() => removeHelpItem(helpItem.id)}
-                            >
-                              <CapcomIcon name="delete" size={18} weight="bold" />
-                              <span className="button-label">
-                                {deletingHelpItemId === helpItem.id ? "Deleting..." : "Delete"}
-                              </span>
-                            </button>
-                          </div>
-                        ) : null}
-                      </article>
+                      </details>
                     )
                   ))}
                 </div>
@@ -327,6 +378,7 @@ export default function HelpPage() {
           </div>
         ) : null}
       </section>
+      )}
 
       {canManageHelp && isHelpFormOpen ? (
         <Modal
@@ -355,13 +407,33 @@ export default function HelpPage() {
               </div>
               <div className="form-row">
                 <label htmlFor="helpCategory">Category</label>
-                <input
+                <select
                   id="helpCategory"
-                  value={helpForm.category}
+                  value={helpCategorySelectValue}
                   disabled={savingHelpItem || isDeletingCurrentHelpItem || isOffline}
-                  onChange={(event) => updateHelpFormField("category", event.target.value)}
-                  placeholder="General"
-                />
+                  onChange={(event) => updateHelpCategorySelection(event.target.value)}
+                >
+                  {helpCategoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                  <option value={HELP_NEW_CATEGORY_VALUE}>Add new category</option>
+                </select>
+                {isAddingHelpCategory ? (
+                  <>
+                    <label className="sr-only" htmlFor="helpNewCategory">
+                      New category
+                    </label>
+                    <input
+                      id="helpNewCategory"
+                      value={helpForm.category}
+                      disabled={savingHelpItem || isDeletingCurrentHelpItem || isOffline}
+                      onChange={(event) => updateHelpFormField("category", event.target.value)}
+                      placeholder="New category"
+                    />
+                  </>
+                ) : null}
               </div>
               <div className="form-row">
                 <label htmlFor="helpSort">Sort</label>
