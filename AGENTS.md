@@ -2,7 +2,7 @@
 
 # CapCom
 
-CapCom is an operational event management platform used by event managers, suppliers, crew, clients and stakeholders.
+CapCom is an event management platform used by event managers, suppliers, crew, clients and stakeholders.
 
 The goal is to provide accurate event information quickly, clearly and reliably.
 
@@ -15,8 +15,6 @@ The objective is to create customer value, not technical novelty.
 ---
 
 # Current Status
-
-CapCom v2 is feature complete.
 
 Core functionality already exists, including:
 
@@ -125,14 +123,6 @@ When proposing changes, consider Firestore cost implications.
 
 CapCom is an operational tool.
 
-Users often need answers to questions such as:
-
-- What time is crew call?
-- Which truck arrives next?
-- Who is responsible?
-- What hotel is booked?
-- Where is the supplier contact?
-
 Prioritise:
 
 - Clarity
@@ -152,7 +142,6 @@ CapCom should feel:
 - Professional
 - Operational
 - Reliable
-- Mobile-first
 
 Avoid:
 
@@ -169,6 +158,10 @@ Prefer:
 - Clear typography
 - Clear touch targets
 - Subtle branding
+
+CapCom will be used on Desktop and Mobile. 
+
+Mobile views can sacrifice features to aid ease of use (users are less likey to edit information on mobile.  They are more likely to view / refer to information. 
 
 ---
 
